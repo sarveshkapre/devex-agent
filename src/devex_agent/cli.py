@@ -17,13 +17,14 @@ def generate(
     watch: bool = typer.Option(False, "--watch", help="Watch local spec file for changes."),
     interval: float = typer.Option(1.0, "--interval", help="Watch poll interval in seconds."),
     no_examples: bool = typer.Option(False, "--no-examples", help="Skip example generation."),
+    no_curl: bool = typer.Option(False, "--no-curl", help="Skip generating curl examples."),
 ) -> None:
     """Generate Markdown API docs from an OpenAPI spec."""
     if watch and (spec.startswith("http://") or spec.startswith("https://")):
         typer.echo("Watch mode only supports local files.")
         raise typer.Exit(code=2)
 
-    options = RenderOptions(include_examples=not no_examples)
+    options = RenderOptions(include_examples=not no_examples, include_curl=not no_curl)
 
     def render_once() -> None:
         spec_data = load_spec(spec)

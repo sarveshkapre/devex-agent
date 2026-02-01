@@ -18,4 +18,4 @@ make dev
 ## Next 3 improvements
 1. Render HTML with a theme + search
 2. Add support for auth schemes and security summaries
-3. Generate curl examples for each endpoint
+3. Group endpoints by tag + add a table of contents

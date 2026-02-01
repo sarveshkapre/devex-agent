@@ -9,6 +9,7 @@ Product teams ship APIs faster than docs can keep up. DevEx Agent turns any Open
 - OpenAPI 3.0/3.1 JSON or YAML input
 - Request/response examples generated from schemas
 - Parameters table per endpoint
+- `curl` examples per endpoint (base URL, params, request body, auth placeholders)
 - Watch mode for local specs
 - CLI-first, friendly output
 

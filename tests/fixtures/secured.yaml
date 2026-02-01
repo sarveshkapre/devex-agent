@@ -1,0 +1,30 @@
+openapi: 3.0.3
+info:
+  title: Secured API
+  version: 1.0.0
+servers:
+  - url: https://api.secure.test
+security:
+  - bearerAuth: []
+paths:
+  /me:
+    get:
+      summary: Get current user
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                properties:
+                  id:
+                    type: string
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+

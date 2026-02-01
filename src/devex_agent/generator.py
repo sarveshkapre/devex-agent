@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import json
+import re
+import shlex
 from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any, cast
+from urllib.parse import urlencode
 
 import httpx
 import yaml
@@ -12,6 +15,7 @@ import yaml
 @dataclass
 class RenderOptions:
     include_examples: bool = True
+    include_curl: bool = True
 
 
 def load_spec(source: str, timeout_s: float = 10.0) -> dict[str, Any]:
@@ -59,7 +63,9 @@ def generate_markdown(spec: dict[str, Any], options: RenderOptions | None = None
         path_item = paths[path]
         for method in _sorted_methods(path_item.keys()):
             operation = path_item[method]
-            _render_operation(lines, path, method, path_item, operation, spec, opts)
+            _render_operation(
+                lines, path, method, path_item, operation, spec, opts, base_url=base_url
+            )
 
     return "\n".join(lines).rstrip() + "\n"
 
@@ -77,6 +83,8 @@ def _render_operation(
     operation: dict[str, Any],
     spec: dict[str, Any],
     opts: RenderOptions,
+    *,
+    base_url: str,
 ) -> None:
     summary = operation.get("summary") or ""
     description = operation.get("description") or ""
@@ -98,27 +106,58 @@ def _render_operation(
         for param in params:
             schema = param.get("schema", {})
             param_type = _schema_type(schema)
+            required = "yes" if bool(param.get("required", False)) else "no"
+            description_text = str(param.get("description", "")).replace("\n", " ")
             lines.append(
                 f"| {param.get('name','')} | {param.get('in','')} | "
-                f"{param.get('required', False)} | {param_type} | {param.get('description','')} |"
+                f"{required} | {param_type} | {description_text} |"
             )
         lines.append("")
 
     request_body = operation.get("requestBody")
+    request_content_type = ""
+    request_example: Any | None = None
     if request_body:
         lines.append("#### Request Body")
         lines.append("")
         if opts.include_examples:
-            example, content_type = _example_from_content(request_body.get("content", {}), spec)
-            if example is not None:
-                lines.append(f"Example ({content_type}):")
+            request_example, request_content_type = _example_from_content(
+                request_body.get("content", {}), spec
+            )
+            if request_example is not None:
+                lines.append(f"Example ({request_content_type}):")
                 lines.append("")
                 lines.append("```json")
-                lines.append(json.dumps(example, indent=2))
+                lines.append(json.dumps(request_example, indent=2))
                 lines.append("```")
                 lines.append("")
+        else:
+            request_content_type = _pick_content_type(request_body.get("content", {}))
 
     responses = operation.get("responses", {})
+    accept_content_type = _pick_accept_content_type(responses)
+
+    if opts.include_curl:
+        curl = _curl_example(
+            method=method,
+            path=path,
+            base_url=base_url,
+            params=params,
+            request_content_type=request_content_type,
+            request_example=request_example,
+            accept_content_type=accept_content_type,
+            operation=operation,
+            spec=spec,
+            include_examples=opts.include_examples,
+        )
+        if curl:
+            lines.append("#### Example curl")
+            lines.append("")
+            lines.append("```bash")
+            lines.extend(curl.splitlines())
+            lines.append("```")
+            lines.append("")
+
     if responses:
         lines.append("#### Responses")
         lines.append("")
@@ -247,3 +286,170 @@ def _resolve_ref(node: dict[str, Any], spec: dict[str, Any]) -> dict[str, Any]:
     if isinstance(current, dict):
         return current
     return node
+
+
+def _pick_content_type(content: dict[str, Any]) -> str:
+    if not content:
+        return ""
+    if "application/json" in content:
+        return "application/json"
+    return next(iter(content))
+
+
+def _pick_accept_content_type(responses: dict[str, Any]) -> str:
+    for status in sorted(responses.keys()):
+        response = responses[status]
+        content = response.get("content", {}) or {}
+        content_type = _pick_content_type(content)
+        if content_type:
+            return content_type
+    return ""
+
+
+def _rendered_url(base_url: str, path: str, query_params: dict[str, str]) -> str:
+    base = base_url.strip()
+    if not base:
+        base = "<BASE_URL>"
+    joined = base.rstrip("/") + path
+    if query_params:
+        joined = joined + "?" + urlencode(query_params)
+    return joined
+
+
+def _path_with_placeholders(path: str) -> str:
+    pattern = r"\{([^}]+)\}"
+    return re.sub(pattern, r"<\1>", path)
+
+
+def _example_value_for_param(param: dict[str, Any], spec: dict[str, Any]) -> str:
+    schema = param.get("schema", {}) or {}
+    resolved_schema = _resolve_ref(schema, spec)
+    example = example_from_schema(resolved_schema, spec, depth=0)
+    if example is None:
+        return "value"
+    if isinstance(example, bool):
+        return "true" if example else "false"
+    if isinstance(example, (int, float, str)):
+        return str(example)
+    return json.dumps(example, separators=(",", ":"))
+
+
+def _effective_security(operation: dict[str, Any], spec: dict[str, Any]) -> list[dict[str, Any]]:
+    op_security = operation.get("security")
+    if op_security is None:
+        security = spec.get("security") or []
+    else:
+        security = op_security
+    if not isinstance(security, list):
+        return []
+    return [cast(dict[str, Any], req) for req in security if isinstance(req, dict)]
+
+
+def _security_headers_and_query(
+    operation: dict[str, Any], spec: dict[str, Any]
+) -> tuple[list[str], dict[str, str]]:
+    requirements = _effective_security(operation, spec)
+    if not requirements:
+        return [], {}
+
+    first_req = requirements[0]
+    components = spec.get("components") or {}
+    schemes = (components.get("securitySchemes") or {}) if isinstance(components, dict) else {}
+
+    headers: list[str] = []
+    query: dict[str, str] = {}
+    for scheme_name in first_req.keys():
+        scheme = schemes.get(scheme_name, {}) if isinstance(schemes, dict) else {}
+        if not isinstance(scheme, dict):
+            continue
+        scheme_type = scheme.get("type")
+        if scheme_type == "http":
+            http_scheme = str(scheme.get("scheme") or "").lower()
+            if http_scheme == "bearer":
+                headers.append("Authorization: Bearer <token>")
+            elif http_scheme == "basic":
+                headers.append("Authorization: Basic <base64(username:password)>")
+            else:
+                headers.append("Authorization: <credentials>")
+        elif scheme_type == "apiKey":
+            name = str(scheme.get("name") or "X-API-Key")
+            location = str(scheme.get("in") or "header")
+            if location == "query":
+                query[name] = "<api_key>"
+            elif location == "header":
+                headers.append(f"{name}: <api_key>")
+        elif scheme_type in {"oauth2", "openIdConnect"}:
+            headers.append("Authorization: Bearer <token>")
+    return headers, query
+
+
+def _format_curl(tokens: list[str]) -> str:
+    quoted = [shlex.quote(t) for t in tokens]
+    if len(quoted) <= 4:
+        return " ".join(quoted)
+    head = " ".join(quoted[:4])
+    rest = quoted[4:]
+    lines = [head + " \\"]
+    for i in range(0, len(rest), 2):
+        chunk = rest[i : i + 2]
+        if i + 2 >= len(rest):
+            lines.append("  " + " ".join(chunk))
+        else:
+            lines.append("  " + " ".join(chunk) + " \\")
+    return "\n".join(lines)
+
+
+def _curl_example(
+    *,
+    method: str,
+    path: str,
+    base_url: str,
+    params: list[dict[str, Any]],
+    request_content_type: str,
+    request_example: Any | None,
+    accept_content_type: str,
+    operation: dict[str, Any],
+    spec: dict[str, Any],
+    include_examples: bool,
+) -> str:
+    path_rendered = _path_with_placeholders(path)
+
+    query_params: dict[str, str] = {}
+    required_query: list[dict[str, Any]] = []
+    optional_query: list[dict[str, Any]] = []
+    for param in params:
+        if param.get("in") != "query":
+            continue
+        if bool(param.get("required", False)):
+            required_query.append(param)
+        else:
+            optional_query.append(param)
+
+    selected_query = required_query or optional_query[:2]
+    for param in selected_query:
+        name = str(param.get("name") or "")
+        if not name:
+            continue
+        query_params[name] = _example_value_for_param(param, spec)
+
+    security_headers, security_query = _security_headers_and_query(operation, spec)
+    query_params = {**query_params, **security_query}
+
+    url = _rendered_url(base_url, path_rendered, query_params)
+
+    tokens: list[str] = ["curl", "-X", method.upper(), url]
+    if accept_content_type:
+        tokens.extend(["-H", f"Accept: {accept_content_type}"])
+    for header in security_headers:
+        tokens.extend(["-H", header])
+    if request_content_type:
+        tokens.extend(["-H", f"Content-Type: {request_content_type}"])
+
+    if request_content_type and method.lower() in {"post", "put", "patch"}:
+        if include_examples and request_example is not None:
+            body = json.dumps(request_example, separators=(",", ":"), ensure_ascii=False)
+            tokens.extend(["--data-raw", body])
+        else:
+            tokens.extend(["--data-raw", "<JSON_BODY>"])
+
+    return _format_curl(tokens)
