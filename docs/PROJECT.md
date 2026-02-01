@@ -17,5 +17,5 @@ make dev
 
 ## Next 3 improvements
 1. Render HTML with a theme + search
-2. Add support for auth schemes and security summaries
-3. Group endpoints by tag + add a table of contents
+2. Improve schema example fidelity (discriminators, better `oneOf`)
+3. Add a simple HTML export (static site build)
