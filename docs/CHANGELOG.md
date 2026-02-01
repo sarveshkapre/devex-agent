@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## v0.1.6
+- Improve watch mode UX (initial render, clearer status, graceful Ctrl+C).
+
 ## v0.1.5
 - Respect OpenAPI top-level `tags` order and render tag descriptions.
 

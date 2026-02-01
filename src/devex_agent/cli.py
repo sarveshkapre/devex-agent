@@ -40,6 +40,7 @@ def generate(
         markdown = generate_markdown(spec_data, options)
         if output:
             Path(output).write_text(markdown, encoding="utf-8")
+            typer.echo(f"Wrote {output}")
         else:
             typer.echo(markdown)
 
@@ -52,11 +53,16 @@ def generate(
         typer.echo(f"File not found: {spec}")
         raise typer.Exit(code=1)
 
-    last_mtime = 0.0
-    typer.echo(f"Watching {spec}...")
+    last_mtime = path.stat().st_mtime
+    typer.echo(f"Watching {spec} (poll every {interval:.1f}s). Press Ctrl+C to stop.")
+    render_once()
     while True:
-        current_mtime = path.stat().st_mtime
-        if current_mtime > last_mtime:
-            render_once()
-            last_mtime = current_mtime
-        time.sleep(interval)
+        try:
+            current_mtime = path.stat().st_mtime
+            if current_mtime > last_mtime:
+                render_once()
+                last_mtime = current_mtime
+            time.sleep(interval)
+        except KeyboardInterrupt:
+            typer.echo("Stopped.")
+            raise typer.Exit(code=0) from None

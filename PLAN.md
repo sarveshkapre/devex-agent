@@ -21,6 +21,7 @@ One-line pitch: Turn any OpenAPI 3.x spec into clean, readable API docs (with ex
 More details: `docs/PROJECT.md`
 
 ## Shipped (latest)
+- v0.1.6: Watch mode UX improvements
 - v0.1.5: Respect tag order + descriptions
 - v0.1.4: Improve `allOf` example fidelity
 - v0.1.3: Add per-endpoint security summaries
