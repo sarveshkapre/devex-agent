@@ -56,3 +56,14 @@ def test_security_summary_renders_for_required_and_public_endpoints() -> None:
     assert "bearerAuth (http bearer)" in markdown
     assert "`GET /public`" in markdown
     assert "No authentication required." in markdown
+
+
+def test_allof_examples_merge_object_fields() -> None:
+    spec_path = Path(__file__).parent / "fixtures" / "allof.yaml"
+    spec = load_spec(str(spec_path))
+    markdown = generate_markdown(spec, RenderOptions(include_curl=False))
+
+    assert "`GET /thing`" in markdown
+    assert "\"id\": \"string\"" in markdown
+    assert "\"name\": \"string\"" in markdown
+    assert "\"createdAt\": \"2025-01-01T00:00:00Z\"" in markdown

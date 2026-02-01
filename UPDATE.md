@@ -1,9 +1,8 @@
 # Update (2026-02-01)
 
 ## Shipped
-- Added per-endpoint Security summaries derived from OpenAPI `security`.
-- Handles `security: []` as "No authentication required."
-- Added tests covering security output.
+- Improved example generation for `allOf` by merging object properties + required fields.
+- Added tests covering `allOf` behavior.
 
 ## Verify
 - `make check`

@@ -21,11 +21,12 @@ One-line pitch: Turn any OpenAPI 3.x spec into clean, readable API docs (with ex
 More details: `docs/PROJECT.md`
 
 ## Shipped (latest)
+- v0.1.4: Improve `allOf` example fidelity
 - v0.1.3: Add per-endpoint security summaries
 - v0.1.2: Add table of contents + tag grouping
 - v0.1.1: Add per-endpoint `curl` examples (incl. auth placeholders)
 - v0.1.0: MVP Markdown generator + examples + watch mode
 
 ## Next
-- Improve schema example fidelity (`allOf` merging, discriminators)
+- Improve schema example fidelity (discriminators, better `oneOf`)
 - Consider HTML export with minimal theme + search

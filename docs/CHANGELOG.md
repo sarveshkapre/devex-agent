@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## v0.1.4
+- Improve example generation for `allOf` by merging object properties and required fields.
+
 ## v0.1.3
 - Add per-endpoint security summaries (includes "no auth" for `security: []`).
 

@@ -1,0 +1,45 @@
+openapi: 3.0.3
+info:
+  title: AllOf API
+  version: 1.0.0
+servers:
+  - url: https://api.allof.test
+paths:
+  /thing:
+    get:
+      summary: Get a composed thing
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Thing"
+components:
+  schemas:
+    Base:
+      type: object
+      required:
+        - id
+        - createdAt
+      properties:
+        id:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    Extra:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+    Thing:
+      allOf:
+        - $ref: "#/components/schemas/Base"
+        - $ref: "#/components/schemas/Extra"

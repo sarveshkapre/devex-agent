@@ -253,7 +253,12 @@ def example_from_schema(schema: dict[str, Any], spec: dict[str, Any], depth: int
     if "enum" in schema and schema["enum"]:
         return schema["enum"][0]
 
-    for key in ("oneOf", "anyOf", "allOf"):
+    if "allOf" in schema and schema["allOf"]:
+        merged = _merge_allof_object_schema(schema["allOf"], spec)
+        if merged is not None:
+            return example_from_schema(merged, spec, depth + 1)
+
+    for key in ("oneOf", "anyOf"):
         if key in schema and schema[key]:
             return example_from_schema(schema[key][0], spec, depth + 1)
 
@@ -324,6 +329,42 @@ def _resolve_ref(node: dict[str, Any], spec: dict[str, Any]) -> dict[str, Any]:
     if isinstance(current, dict):
         return current
     return node
+
+
+def _merge_allof_object_schema(all_of: Any, spec: dict[str, Any]) -> dict[str, Any] | None:
+    if not isinstance(all_of, list) or not all_of:
+        return None
+
+    merged_properties: dict[str, Any] = {}
+    merged_required: set[str] = set()
+    saw_object = False
+
+    for item in all_of:
+        if not isinstance(item, dict):
+            return None
+        resolved = _resolve_ref(item, spec) if "$ref" in item else item
+        if not isinstance(resolved, dict):
+            return None
+
+        item_type = resolved.get("type")
+        if item_type == "object" or "properties" in resolved:
+            saw_object = True
+        properties = resolved.get("properties", {}) or {}
+        if isinstance(properties, dict):
+            merged_properties.update(properties)
+        required = resolved.get("required", []) or []
+        if isinstance(required, list):
+            merged_required.update(str(x) for x in required if isinstance(x, str))
+
+    if not saw_object and not merged_properties:
+        return None
+
+    merged: dict[str, Any] = {"type": "object"}
+    if merged_properties:
+        merged["properties"] = merged_properties
+    if merged_required:
+        merged["required"] = sorted(merged_required)
+    return merged
 
 
 @dataclass(frozen=True)
