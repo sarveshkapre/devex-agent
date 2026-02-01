@@ -9,8 +9,4 @@
 - `make check`
 
 ## PR
-- If `gh` is authenticated: `gh pr create --fill`
-- Otherwise:
-  - `git push -u origin <branch>`
-  - Open a PR from that branch in GitHub UI
-
+- Open PR: https://github.com/sarveshkapre/devex-agent/pull/1
