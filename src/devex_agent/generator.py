@@ -133,6 +133,8 @@ def _render_operation(
         lines.append(description)
         lines.append("")
 
+    _render_security(lines, operation, spec)
+
     params = _collect_parameters(path_item, operation, spec)
     if params:
         lines.append("#### Parameters")
@@ -497,6 +499,61 @@ def _security_headers_and_query(
         elif scheme_type in {"oauth2", "openIdConnect"}:
             headers.append("Authorization: Bearer <token>")
     return headers, query
+
+
+def _render_security(lines: list[str], operation: dict[str, Any], spec: dict[str, Any]) -> None:
+    requirements = _effective_security(operation, spec)
+    if not requirements:
+        # If the operation explicitly sets `security: []`, it means no auth required.
+        if operation.get("security") == []:
+            lines.append("#### Security")
+            lines.append("")
+            lines.append("No authentication required.")
+            lines.append("")
+        return
+
+    components = spec.get("components") or {}
+    schemes = (components.get("securitySchemes") or {}) if isinstance(components, dict) else {}
+
+    lines.append("#### Security")
+    lines.append("")
+    lines.append("Authentication required (one of):")
+    lines.append("")
+
+    for idx, req in enumerate(requirements, start=1):
+        parts: list[str] = []
+        for scheme_name, scopes in req.items():
+            detail = _describe_security_scheme(scheme_name, schemes)
+            scope_text = ""
+            if isinstance(scopes, list) and scopes:
+                scope_text = f" (scopes: {', '.join(map(str, scopes))})"
+            parts.append(f"{detail}{scope_text}")
+        if not parts:
+            continue
+        prefix = f"{idx}. " if len(requirements) > 1 else "- "
+        joiner = " + "  # AND within a single requirement object
+        lines.append(prefix + joiner.join(parts))
+    lines.append("")
+
+
+def _describe_security_scheme(scheme_name: str, schemes: Any) -> str:
+    scheme = schemes.get(scheme_name, {}) if isinstance(schemes, dict) else {}
+    if not isinstance(scheme, dict):
+        return scheme_name
+
+    scheme_type = str(scheme.get("type") or "").strip() or "unknown"
+    if scheme_type == "http":
+        http_scheme = str(scheme.get("scheme") or "").strip() or "http"
+        return f"{scheme_name} (http {http_scheme})"
+    if scheme_type == "apiKey":
+        name = str(scheme.get("name") or "X-API-Key")
+        location = str(scheme.get("in") or "header")
+        return f"{scheme_name} (apiKey in {location}: {name})"
+    if scheme_type == "oauth2":
+        return f"{scheme_name} (oauth2)"
+    if scheme_type == "openIdConnect":
+        return f"{scheme_name} (openIdConnect)"
+    return f"{scheme_name} ({scheme_type})"
 
 
 def _format_curl(tokens: list[str]) -> str:

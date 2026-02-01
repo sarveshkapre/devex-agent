@@ -11,6 +11,7 @@ Product teams ship APIs faster than docs can keep up. DevEx Agent turns any Open
 - Parameters table per endpoint
 - `curl` examples per endpoint (base URL, params, request body, auth placeholders)
 - Table of contents + endpoints grouped by tag
+- Security summary per endpoint (based on OpenAPI `security`)
 - Watch mode for local specs
 - CLI-first, friendly output
 

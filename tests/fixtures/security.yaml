@@ -1,0 +1,28 @@
+openapi: 3.0.3
+info:
+  title: Security API
+  version: 1.0.0
+servers:
+  - url: https://api.security.test
+security:
+  - bearerAuth: []
+paths:
+  /public:
+    get:
+      summary: Public endpoint
+      security: []
+      responses:
+        "200":
+          description: OK
+  /private:
+    get:
+      summary: Private endpoint
+      responses:
+        "200":
+          description: OK
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+

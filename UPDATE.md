@@ -1,9 +1,9 @@
 # Update (2026-02-01)
 
 ## Shipped
-- Added table of contents + endpoints grouped by tag in generated Markdown.
-- Added CLI toggles: `--no-toc` and `--no-group-by-tag`.
-- Added tests covering tag grouping + TOC.
+- Added per-endpoint Security summaries derived from OpenAPI `security`.
+- Handles `security: []` as "No authentication required."
+- Added tests covering security output.
 
 ## Verify
 - `make check`

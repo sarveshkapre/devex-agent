@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## v0.1.3
+- Add per-endpoint security summaries (includes "no auth" for `security: []`).
+
 ## v0.1.2
 - Add table of contents and group endpoints by tag (configurable via CLI).
 

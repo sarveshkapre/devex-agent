@@ -44,3 +44,15 @@ def test_groups_endpoints_by_tag_and_renders_toc() -> None:
     assert "### Users" in markdown
     assert "`GET /pets`" in markdown
     assert "`GET /users`" in markdown
+
+
+def test_security_summary_renders_for_required_and_public_endpoints() -> None:
+    spec_path = Path(__file__).parent / "fixtures" / "security.yaml"
+    spec = load_spec(str(spec_path))
+    markdown = generate_markdown(spec, RenderOptions(include_curl=False))
+
+    assert "`GET /private`" in markdown
+    assert "#### Security" in markdown
+    assert "bearerAuth (http bearer)" in markdown
+    assert "`GET /public`" in markdown
+    assert "No authentication required." in markdown
