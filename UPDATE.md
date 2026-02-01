@@ -1,8 +1,8 @@
 # Update (2026-02-01)
 
 ## Shipped
-- Improved example generation for `allOf` by merging object properties + required fields.
-- Added tests covering `allOf` behavior.
+- Respect OpenAPI top-level tag ordering and render tag descriptions in grouped output.
+- Added tests covering tag ordering + descriptions.
 
 ## Verify
 - `make check`

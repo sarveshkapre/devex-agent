@@ -46,6 +46,20 @@ def test_groups_endpoints_by_tag_and_renders_toc() -> None:
     assert "`GET /users`" in markdown
 
 
+def test_respects_top_level_tag_order_and_renders_tag_descriptions() -> None:
+    spec_path = Path(__file__).parent / "fixtures" / "tag_order.yaml"
+    spec = load_spec(str(spec_path))
+    markdown = generate_markdown(spec, RenderOptions(include_curl=False))
+
+    users_idx = markdown.find("### Users")
+    pets_idx = markdown.find("### Pets")
+    assert users_idx != -1
+    assert pets_idx != -1
+    assert users_idx < pets_idx
+    assert "User operations." in markdown
+    assert "Pet operations." in markdown
+
+
 def test_security_summary_renders_for_required_and_public_endpoints() -> None:
     spec_path = Path(__file__).parent / "fixtures" / "security.yaml"
     spec = load_spec(str(spec_path))

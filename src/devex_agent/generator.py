@@ -61,15 +61,20 @@ def generate_markdown(spec: dict[str, Any], options: RenderOptions | None = None
     lines.append("")
 
     operations = _collect_operations(spec)
+    tag_meta = _tag_metadata(spec)
     if opts.include_toc:
-        _render_toc(lines, operations, group_by_tag=opts.group_by_tag)
+        _render_toc(lines, operations, group_by_tag=opts.group_by_tag, tag_meta=tag_meta)
 
     if opts.group_by_tag:
-        for tag in _tag_order(operations):
+        for tag in _tag_order(operations, tag_meta):
             tag_anchor = f"tag-{_slugify(tag)}"
             lines.append(f'<a id="{tag_anchor}"></a>')
             lines.append(f"### {tag}")
             lines.append("")
+            tag_description = tag_meta.get(tag)
+            if tag_description:
+                lines.append(tag_description)
+                lines.append("")
             for op in operations:
                 if op.tag != tag:
                     continue
@@ -406,11 +411,22 @@ def _primary_tag(operation: dict[str, Any]) -> str:
     return "Untagged"
 
 
-def _tag_order(operations: list[_OperationRef]) -> list[str]:
-    tags = sorted({op.tag for op in operations if op.tag != "Untagged"})
-    if any(op.tag == "Untagged" for op in operations):
-        tags.append("Untagged")
-    return tags
+def _tag_order(operations: list[_OperationRef], tag_meta: dict[str, str]) -> list[str]:
+    present = {op.tag for op in operations}
+    ordered: list[str] = []
+
+    # Respect OpenAPI `tags` ordering where available.
+    for tag in tag_meta.keys():
+        if tag in present and tag != "Untagged":
+            ordered.append(tag)
+
+    # Append any tags not declared in `tags`.
+    for tag in sorted(t for t in present if t not in tag_meta and t != "Untagged"):
+        ordered.append(tag)
+
+    if "Untagged" in present and "Untagged" not in ordered:
+        ordered.append("Untagged")
+    return ordered
 
 
 def _slugify(text: str) -> str:
@@ -419,14 +435,39 @@ def _slugify(text: str) -> str:
     return slug or "section"
 
 
-def _render_toc(lines: list[str], operations: list[_OperationRef], *, group_by_tag: bool) -> None:
+def _tag_metadata(spec: dict[str, Any]) -> dict[str, str]:
+    tags = spec.get("tags") or []
+    if not isinstance(tags, list):
+        return {}
+    meta: dict[str, str] = {}
+    for tag in tags:
+        if not isinstance(tag, dict):
+            continue
+        name = tag.get("name")
+        if not isinstance(name, str) or not name.strip():
+            continue
+        description = tag.get("description")
+        if isinstance(description, str) and description.strip():
+            meta[name.strip()] = description.strip()
+        else:
+            meta[name.strip()] = ""
+    return meta
+
+
+def _render_toc(
+    lines: list[str],
+    operations: list[_OperationRef],
+    *,
+    group_by_tag: bool,
+    tag_meta: dict[str, str],
+) -> None:
     if not operations:
         return
 
     lines.append("### Contents")
     lines.append("")
     if group_by_tag:
-        for tag in _tag_order(operations):
+        for tag in _tag_order(operations, tag_meta):
             tag_anchor = f"tag-{_slugify(tag)}"
             lines.append(f"- [{tag}](#{tag_anchor})")
             for op in operations:

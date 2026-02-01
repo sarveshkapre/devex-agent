@@ -1,0 +1,27 @@
+openapi: 3.0.3
+info:
+  title: Tag Order API
+  version: 1.0.0
+tags:
+  - name: Users
+    description: User operations.
+  - name: Pets
+    description: Pet operations.
+servers:
+  - url: https://api.order.test
+paths:
+  /pets:
+    get:
+      tags: [Pets]
+      summary: List pets
+      responses:
+        "200":
+          description: OK
+  /users:
+    get:
+      tags: [Users]
+      summary: List users
+      responses:
+        "200":
+          description: OK
+

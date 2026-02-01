@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## v0.1.5
+- Respect OpenAPI top-level `tags` order and render tag descriptions.
+
 ## v0.1.4
 - Improve example generation for `allOf` by merging object properties and required fields.
 
