@@ -1,0 +1,24 @@
+openapi: 3.0.3
+info:
+  title: Tagged API
+  version: 1.0.0
+servers:
+  - url: https://api.tagged.test
+paths:
+  /pets:
+    get:
+      tags:
+        - Pets
+      summary: List pets
+      responses:
+        "200":
+          description: OK
+  /users:
+    get:
+      tags:
+        - Users
+      summary: List users
+      responses:
+        "200":
+          description: OK
+

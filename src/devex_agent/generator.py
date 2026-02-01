@@ -16,6 +16,8 @@ import yaml
 class RenderOptions:
     include_examples: bool = True
     include_curl: bool = True
+    include_toc: bool = True
+    group_by_tag: bool = True
 
 
 def load_spec(source: str, timeout_s: float = 10.0) -> dict[str, Any]:
@@ -58,13 +60,44 @@ def generate_markdown(spec: dict[str, Any], options: RenderOptions | None = None
     lines.append("## Endpoints")
     lines.append("")
 
-    paths: dict[str, Any] = spec.get("paths", {})
-    for path in sorted(paths.keys()):
-        path_item = paths[path]
-        for method in _sorted_methods(path_item.keys()):
-            operation = path_item[method]
+    operations = _collect_operations(spec)
+    if opts.include_toc:
+        _render_toc(lines, operations, group_by_tag=opts.group_by_tag)
+
+    if opts.group_by_tag:
+        for tag in _tag_order(operations):
+            tag_anchor = f"tag-{_slugify(tag)}"
+            lines.append(f'<a id="{tag_anchor}"></a>')
+            lines.append(f"### {tag}")
+            lines.append("")
+            for op in operations:
+                if op.tag != tag:
+                    continue
+                _render_operation(
+                    lines,
+                    op.path,
+                    op.method,
+                    op.path_item,
+                    op.operation,
+                    spec,
+                    opts,
+                    base_url=base_url,
+                    heading_level=4,
+                    op_anchor_id=op.anchor_id,
+                )
+    else:
+        for op in operations:
             _render_operation(
-                lines, path, method, path_item, operation, spec, opts, base_url=base_url
+                lines,
+                op.path,
+                op.method,
+                op.path_item,
+                op.operation,
+                spec,
+                opts,
+                base_url=base_url,
+                heading_level=3,
+                op_anchor_id=op.anchor_id,
             )
 
     return "\n".join(lines).rstrip() + "\n"
@@ -85,10 +118,13 @@ def _render_operation(
     opts: RenderOptions,
     *,
     base_url: str,
+    heading_level: int,
+    op_anchor_id: str,
 ) -> None:
     summary = operation.get("summary") or ""
     description = operation.get("description") or ""
-    lines.append(f"### `{method.upper()} {path}`")
+    lines.append(f'<a id="{op_anchor_id}"></a>')
+    lines.append(f'{"#" * heading_level} `{method.upper()} {path}`')
     lines.append("")
     if summary:
         lines.append(summary)
@@ -286,6 +322,86 @@ def _resolve_ref(node: dict[str, Any], spec: dict[str, Any]) -> dict[str, Any]:
     if isinstance(current, dict):
         return current
     return node
+
+
+@dataclass(frozen=True)
+class _OperationRef:
+    path: str
+    method: str
+    path_item: dict[str, Any]
+    operation: dict[str, Any]
+    tag: str
+    anchor_id: str
+
+
+def _collect_operations(spec: dict[str, Any]) -> list[_OperationRef]:
+    paths: dict[str, Any] = spec.get("paths", {})
+    ops: list[_OperationRef] = []
+    for path in sorted(paths.keys()):
+        path_item = paths[path]
+        for method in _sorted_methods(path_item.keys()):
+            operation = path_item[method]
+            tag = _primary_tag(operation)
+            anchor_id = f"op-{_slugify(f'{method}-{path}')}"
+            ops.append(
+                _OperationRef(
+                    path=path,
+                    method=method,
+                    path_item=path_item,
+                    operation=operation,
+                    tag=tag,
+                    anchor_id=anchor_id,
+                )
+            )
+    return ops
+
+
+def _primary_tag(operation: dict[str, Any]) -> str:
+    tags = operation.get("tags") or []
+    if isinstance(tags, list) and tags and isinstance(tags[0], str) and tags[0].strip():
+        return tags[0].strip()
+    return "Untagged"
+
+
+def _tag_order(operations: list[_OperationRef]) -> list[str]:
+    tags = sorted({op.tag for op in operations if op.tag != "Untagged"})
+    if any(op.tag == "Untagged" for op in operations):
+        tags.append("Untagged")
+    return tags
+
+
+def _slugify(text: str) -> str:
+    slug = re.sub(r"[^a-zA-Z0-9]+", "-", text.strip().lower())
+    slug = re.sub(r"-{2,}", "-", slug).strip("-")
+    return slug or "section"
+
+
+def _render_toc(lines: list[str], operations: list[_OperationRef], *, group_by_tag: bool) -> None:
+    if not operations:
+        return
+
+    lines.append("### Contents")
+    lines.append("")
+    if group_by_tag:
+        for tag in _tag_order(operations):
+            tag_anchor = f"tag-{_slugify(tag)}"
+            lines.append(f"- [{tag}](#{tag_anchor})")
+            for op in operations:
+                if op.tag != tag:
+                    continue
+                label = f"{op.method.upper()} {op.path}"
+                summary = op.operation.get("summary") or ""
+                if summary:
+                    label = f"{label} — {summary}"
+                lines.append(f"  - [{label}](#{op.anchor_id})")
+    else:
+        for op in operations:
+            label = f"{op.method.upper()} {op.path}"
+            summary = op.operation.get("summary") or ""
+            if summary:
+                label = f"{label} — {summary}"
+            lines.append(f"- [{label}](#{op.anchor_id})")
+    lines.append("")
 
 
 def _pick_content_type(content: dict[str, Any]) -> str:

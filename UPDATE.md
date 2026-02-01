@@ -1,12 +1,9 @@
 # Update (2026-02-01)
 
 ## Shipped
-- Added per-endpoint `curl` examples (base URL, params, request body).
-- Added basic auth placeholders in `curl` examples for bearer/apiKey security schemes.
-- Added tests covering `curl` output and security headers.
+- Added table of contents + endpoints grouped by tag in generated Markdown.
+- Added CLI toggles: `--no-toc` and `--no-group-by-tag`.
+- Added tests covering tag grouping + TOC.
 
 ## Verify
 - `make check`
-
-## PR
-- Open PR: https://github.com/sarveshkapre/devex-agent/pull/1

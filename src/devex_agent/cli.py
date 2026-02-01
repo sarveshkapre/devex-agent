@@ -18,13 +18,22 @@ def generate(
     interval: float = typer.Option(1.0, "--interval", help="Watch poll interval in seconds."),
     no_examples: bool = typer.Option(False, "--no-examples", help="Skip example generation."),
     no_curl: bool = typer.Option(False, "--no-curl", help="Skip generating curl examples."),
+    no_toc: bool = typer.Option(False, "--no-toc", help="Skip generating a table of contents."),
+    no_group_by_tag: bool = typer.Option(
+        False, "--no-group-by-tag", help="Don't group endpoints by tag."
+    ),
 ) -> None:
     """Generate Markdown API docs from an OpenAPI spec."""
     if watch and (spec.startswith("http://") or spec.startswith("https://")):
         typer.echo("Watch mode only supports local files.")
         raise typer.Exit(code=2)
 
-    options = RenderOptions(include_examples=not no_examples, include_curl=not no_curl)
+    options = RenderOptions(
+        include_examples=not no_examples,
+        include_curl=not no_curl,
+        include_toc=not no_toc,
+        group_by_tag=not no_group_by_tag,
+    )
 
     def render_once() -> None:
         spec_data = load_spec(spec)

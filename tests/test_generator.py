@@ -30,3 +30,17 @@ def test_curl_examples_include_security_headers() -> None:
     assert "curl -X GET" in markdown
     assert "api.secure.test/me" in markdown
     assert "Authorization: Bearer <token>" in markdown
+
+
+def test_groups_endpoints_by_tag_and_renders_toc() -> None:
+    spec_path = Path(__file__).parent / "fixtures" / "tagged.yaml"
+    spec = load_spec(str(spec_path))
+    markdown = generate_markdown(spec, RenderOptions())
+
+    assert "### Contents" in markdown
+    assert "- [Pets](#tag-pets)" in markdown
+    assert "- [Users](#tag-users)" in markdown
+    assert "### Pets" in markdown
+    assert "### Users" in markdown
+    assert "`GET /pets`" in markdown
+    assert "`GET /users`" in markdown
