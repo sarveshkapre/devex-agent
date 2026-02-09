@@ -136,6 +136,7 @@
   - Local verification:
     - `make check` (pass; 21 tests)
     - `.venv/bin/devex-agent tests/fixtures/servers.yaml --list-servers` (pass; prints expanded URLs)
+    - `.venv/bin/devex-agent https://raw.githubusercontent.com/sarveshkapre/devex-agent/main/tests/fixtures/petstore.yaml --output /tmp/devex-agent-url.md` (pass; URL fetch path)
   - CI verification:
     - Run `21830046340` (success)
 - Confidence: High
