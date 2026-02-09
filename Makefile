@@ -1,33 +1,50 @@
 .PHONY: setup dev test lint typecheck build check release
 
 PYTHON ?= python3
+VENV ?= .venv
+
+ifeq ($(wildcard $(VENV)/bin/python),)
+PYTHON_BIN := $(PYTHON)
+PIP_BIN := pip
+RUFF_BIN := ruff
+MYPY_BIN := mypy
+PYTEST_BIN := pytest
+BANDIT_BIN := bandit
+else
+PYTHON_BIN := $(VENV)/bin/python
+PIP_BIN := $(VENV)/bin/pip
+RUFF_BIN := $(VENV)/bin/ruff
+MYPY_BIN := $(VENV)/bin/mypy
+PYTEST_BIN := $(VENV)/bin/pytest
+BANDIT_BIN := $(VENV)/bin/bandit
+endif
 
 setup:
-	$(PYTHON) -m venv .venv
-	. .venv/bin/activate && $(PYTHON) -m pip install -U pip
-	. .venv/bin/activate && pip install -e .[dev]
+	$(PYTHON) -m venv $(VENV)
+	$(VENV)/bin/python -m pip install -U pip
+	$(VENV)/bin/pip install -e .[dev]
 
 dev:
-	. .venv/bin/activate && devex-agent --help
+	$(PYTHON_BIN) -m devex_agent.cli --help
 
 test:
-	. .venv/bin/activate && pytest
+	$(PYTEST_BIN)
 
 lint:
-	. .venv/bin/activate && ruff check src tests
+	$(RUFF_BIN) check src tests
 
 typecheck:
-	. .venv/bin/activate && mypy src
+	$(MYPY_BIN) src
 
 build:
-	. .venv/bin/activate && $(PYTHON) -m build
+	$(PYTHON_BIN) -m build
 
 check:
-	. .venv/bin/activate && ruff check src tests
-	. .venv/bin/activate && mypy src
-	. .venv/bin/activate && pytest
-	. .venv/bin/activate && bandit -q -r src
-	. .venv/bin/activate && $(PYTHON) -m build
+	$(RUFF_BIN) check src tests
+	$(MYPY_BIN) src
+	$(PYTEST_BIN)
+	$(BANDIT_BIN) -q -r src
+	$(PYTHON_BIN) -m build
 
 release:
 	@echo "Update docs/CHANGELOG.md, tag release, and publish GitHub Release."
