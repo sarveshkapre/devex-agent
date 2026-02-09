@@ -32,5 +32,6 @@ More details: `docs/PROJECT.md`
 - v0.1.0: MVP Markdown generator + examples + watch mode
 
 ## Next
-- Add `--strict` mode for unresolved `$ref` / unsupported rendering cases
+- Multi-file specs: bundle local external `$ref` so split OpenAPI specs render cleanly
+- Spec diff mode for change-focused docs between two versions
 - Improve schema example fidelity on more real-world OpenAPI specs

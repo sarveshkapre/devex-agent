@@ -16,6 +16,6 @@ make dev
 ```
 
 ## Next 3 improvements
-1. Improve HTML UX (navigation polish, active state, deep links).
-2. Multi-file spec merging for split OpenAPI specs.
-3. Spec diff mode for change-focused docs between two versions.
+1. Spec diff mode for change-focused docs between two versions.
+2. `--output-dir` mode to emit one file per tag (better UX for very large specs).
+3. Performance: incremental/cached rendering for `--watch` on large specs.

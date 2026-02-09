@@ -64,6 +64,21 @@ Supported request/response content types for strict mode:
 devex-agent ./openapi.yaml --strict --output ./API.md
 ```
 
+## Multi-file specs (bundle external `$ref`)
+Many real-world OpenAPI specs are split across multiple files using `$ref` (for example, schemas in
+`./schemas.yaml` referenced from `./openapi.yaml`).
+
+Use `--bundle` to inline external *local file* `$ref` before rendering (works for JSON or YAML
+referenced files):
+
+```bash
+devex-agent ./openapi.yaml --bundle --output ./API.md
+```
+
+Notes:
+- `--bundle` only supports local file `$ref` (not `http(s)://...` refs).
+- Pair `--bundle` with `--strict` to fail fast if any referenced file or pointer can't be resolved.
+
 ## Docker
 ```bash
 docker build -t devex-agent .

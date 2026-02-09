@@ -206,6 +206,33 @@
 - Confidence: Medium-High
 - Trust Label: Verified (tests + smoke)
 
+## Entry 2026-02-09 - Multi-file spec support via `--bundle`
+- Decision:
+  - Add `--bundle` to inline external *local file* `$ref` so split OpenAPI specs can be rendered as a single logical spec.
+  - Overlay `$ref` siblings (e.g. `example`) during internal ref resolution to preserve doc-friendly overrides commonly used in real-world specs.
+- Why:
+  - Many OpenAPI specs are split across files (schemas/parameters) and fail strict validation or render poorly without a bundling step.
+  - `$ref` siblings are frequently used to override examples/descriptions for documentation, even if the formal spec semantics treat them as ignored.
+- Evidence:
+  - Commit: `48d599b`
+  - Files:
+    - `src/devex_agent/cli.py`
+    - `src/devex_agent/generator.py`
+    - `tests/test_cli.py`
+    - `tests/test_generator.py`
+    - `tests/fixtures/multi_file_root.yaml`
+    - `tests/fixtures/multi_file_schemas.yaml`
+    - `tests/fixtures/ref_siblings.yaml`
+  - Local verification:
+    - `make check` (pass)
+    - `.venv/bin/devex-agent tests/fixtures/multi_file_root.yaml --bundle --strict --output /tmp/devex-bundle-smoke.md` (pass)
+    - `rg -n '\"kind\": \"dog\"|\"id\": \"string\"' /tmp/devex-bundle-smoke.md` (pass)
+- Confidence: Medium-High
+- Trust Label: Verified (tests + smoke)
+- Follow-ups:
+  - Consider opt-in support for URL-based `$ref` (with safe defaults) only if there is a strong user need.
+  - If bundling grows, revisit deduplication/perf for very large shared component graphs.
+
 ## Mistakes And Fixes
 - 2026-02-09 - Mistake: assumed Typer required explicit subcommands and briefly implemented an unnecessary console-script wrapper.
   - Fix: validated actual CLI shape with `CliRunner` and implemented a compatibility alias (`generate` prefix) without changing the entrypoint.
