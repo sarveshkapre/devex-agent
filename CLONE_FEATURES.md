@@ -7,10 +7,16 @@
 - Gaps found during codebase exploration
 
 ## Candidate Features To Do
-- [ ] P1 - Add HTML export with a minimal theme and static search (roadmap near-term item).
-- [ ] P1 - Improve schema fidelity for `oneOf`/discriminator selection logic (roadmap near-term item).
-- [ ] P2 - Add multi-file spec merging support for split OpenAPI specs (roadmap later item).
-- [ ] P2 - Add spec diff mode to generate change-focused docs between two versions.
+- [ ] (Selected) P0 - Commit `AGENTS.md` into the repo so the autonomous operating contract is versioned and CI can enforce it. (Impact 3/5, Effort 1/5, Strategic fit 5/5, Differentiation 1/5, Risk 1/5, Confidence 5/5)
+- [ ] (Selected) P1 - Improve schema example fidelity for `oneOf`/`anyOf` with discriminator-aware variant selection (avoid null variants; include discriminator property when possible). (Impact 5/5, Effort 2/5, Strategic fit 5/5, Differentiation 3/5, Risk 2/5, Confidence 4/5)
+- [ ] (Selected) P1 - Add HTML export with a minimal theme and static client-side search/filter (roadmap near-term item). (Impact 5/5, Effort 3/5, Strategic fit 5/5, Differentiation 3/5, Risk 3/5, Confidence 3/5)
+- [ ] P2 - Auto-detect output format from `--output` extension (e.g. `.md` vs `.html`) to reduce CLI friction. (Impact 3/5, Effort 1/5, Strategic fit 4/5, Differentiation 2/5, Risk 1/5, Confidence 4/5)
+- [ ] P2 - Add multi-file spec merging support for split OpenAPI specs (roadmap later item). (Impact 4/5, Effort 4/5, Strategic fit 4/5, Differentiation 3/5, Risk 4/5, Confidence 2/5)
+- [ ] P2 - Add spec diff mode to generate change-focused docs between two versions. (Impact 3/5, Effort 4/5, Strategic fit 3/5, Differentiation 3/5, Risk 3/5, Confidence 2/5)
+- [ ] P2 - Add `--server` / `--base-url` selection to choose among OpenAPI `servers` (improves `curl` accuracy). (Impact 4/5, Effort 2/5, Strategic fit 4/5, Differentiation 2/5, Risk 2/5, Confidence 3/5)
+- [ ] P3 - Add `--output-dir` mode to emit one file per tag (better UX for large specs). (Impact 3/5, Effort 4/5, Strategic fit 3/5, Differentiation 3/5, Risk 3/5, Confidence 2/5)
+- [ ] P3 - Add a `--strict` mode to fail generation if `$ref` cannot be resolved or content types are unsupported. (Impact 2/5, Effort 3/5, Strategic fit 3/5, Differentiation 2/5, Risk 2/5, Confidence 3/5)
+- [ ] P3 - Add optional non-`curl` code samples (HTTPie) for parity with common doc generators. (Impact 2/5, Effort 3/5, Strategic fit 3/5, Differentiation 2/5, Risk 2/5, Confidence 3/5)
 
 ## Implemented
 - [x] 2026-02-09 - CI-safe `Makefile` execution for both local `.venv` and CI/global environments.
