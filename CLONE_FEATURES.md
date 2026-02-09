@@ -7,12 +7,13 @@
 - Gaps found during codebase exploration
 
 ## Candidate Features To Do
-- [ ] P2 (Cycle 3) - Add `--strict` mode: fail generation if `$ref` cannot be resolved, or if request/response bodies can’t be rendered for a supported content type. (Impact 3/5, Effort 3/5, Strategic fit 4/5, Differentiation 2/5, Risk 3/5, Confidence 3/5)
-- [ ] P2 - Improve HTML UX: highlight active nav item, preserve search state in URL hash, and add a “copy anchor link” affordance for endpoints. (Impact 3/5, Effort 3/5, Strategic fit 3/5, Differentiation 2/5, Risk 2/5, Confidence 3/5)
-- [ ] P2 - Add spec diff mode to generate change-focused docs between two versions. (Impact 3/5, Effort 4/5, Strategic fit 3/5, Differentiation 3/5, Risk 3/5, Confidence 2/5)
-- [ ] P2 - Add multi-file spec merging support for split OpenAPI specs (roadmap later item). (Impact 4/5, Effort 4/5, Strategic fit 4/5, Differentiation 3/5, Risk 4/5, Confidence 2/5)
-- [ ] P3 - Add `--output-dir` mode to emit one file per tag (better UX for large specs). (Impact 3/5, Effort 4/5, Strategic fit 3/5, Differentiation 3/5, Risk 3/5, Confidence 2/5)
-- [ ] P3 - Add a minimal `--serve` mode for generated HTML (local static server + optional `--watch` rebuild). (Impact 3/5, Effort 4/5, Strategic fit 3/5, Differentiation 2/5, Risk 3/5, Confidence 2/5)
+- [ ] P1 (Cycle 4, Selected) - Add `--strict` mode: fail generation on unresolved `$ref` and unsupported request/response body content types (default supported: JSON and `*+json`). Add fixtures + tests + docs. (Impact 4/5, Effort 3/5, Strategic fit 5/5, Differentiation 2/5, Risk 3/5, Confidence 4/5)
+- [ ] P1 (Cycle 4, Selected) - HTML UX polish: active nav highlight, shareable deep links that preserve filter state, and “copy link” affordances for tags/endpoints. (Impact 4/5, Effort 3/5, Strategic fit 4/5, Differentiation 2/5, Risk 2/5, Confidence 3/5)
+- [ ] P2 - Spec diff mode to generate change-focused docs between two versions. (Impact 3/5, Effort 4/5, Strategic fit 3/5, Differentiation 3/5, Risk 3/5, Confidence 2/5)
+- [ ] P2 - Multi-file spec merging support for split OpenAPI specs (roadmap later item). (Impact 4/5, Effort 4/5, Strategic fit 4/5, Differentiation 3/5, Risk 4/5, Confidence 2/5)
+- [ ] P3 - `--output-dir` mode to emit one file per tag (better UX for large specs). (Impact 3/5, Effort 4/5, Strategic fit 3/5, Differentiation 3/5, Risk 3/5, Confidence 2/5)
+- [ ] P3 - Minimal `--serve` mode for generated HTML (local static server + optional `--watch` rebuild). (Impact 3/5, Effort 4/5, Strategic fit 3/5, Differentiation 2/5, Risk 3/5, Confidence 2/5)
+- [ ] P3 - Performance: incremental/cached rendering for `--watch` on large specs (avoid full rebuild when only a small section changes). (Impact 3/5, Effort 4/5, Strategic fit 3/5, Differentiation 2/5, Risk 3/5, Confidence 2/5)
 - [ ] P3 - Hosted docs preview. (Impact 4/5, Effort 5/5, Strategic fit 3/5, Differentiation 3/5, Risk 4/5, Confidence 1/5)
 
 ## Implemented
@@ -59,6 +60,9 @@
 - Market scan (bounded, 2026-02-09): many doc platforms support multiple OpenAPI specs, interactive "try it" panels, and multiple-server selection; DevEx Agent should prioritize low-friction static artifacts and accurate base URLs.
 - Market scan source: Mintlify OpenAPI setup (multiple specs; interactive docs; `$ref` internal-only) https://www.mintlify.com/docs/api-playground/openapi-setup
 - Market scan source: Docusaurus OpenAPI plugin (static generation + demo panel) https://github.com/cloud-annotations/docusaurus-openapi
+- Market scan (bounded, 2026-02-09): “strictness” and linting are first-class in adjacent tooling (unresolved `$ref` and unused components are common baseline checks in CLI linters). https://redocly.com/docs/cli/rules/built-in-rules
+- Market scan (bounded, 2026-02-09): multi-file specs and bundling/dereferencing are common needs; several CLIs explicitly support bundling OpenAPI specs into a single artifact. https://github.com/APIDevTools/swagger-cli
+- Market scan (bounded, 2026-02-09): interactive “Try It” consoles + multi-server selection are a common UX expectation in interactive doc components. https://stoplight.io/open-source/elements
 
 ## Notes
 - This file is maintained by the autonomous clone loop.
