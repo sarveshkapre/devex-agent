@@ -20,6 +20,7 @@ class RenderOptions:
     include_curl: bool = True
     include_toc: bool = True
     group_by_tag: bool = True
+    strict: bool = False
 
 
 def _expand_server_url(server: dict[str, Any]) -> str:
@@ -120,6 +121,106 @@ def list_servers(spec: dict[str, Any]) -> list[tuple[str, str | None]]:
     return out
 
 
+def _resolve_ref_target(spec: dict[str, Any], ref: str) -> Any:
+    if not ref.startswith("#/"):
+        return None
+    parts = ref[2:].split("/")
+    current: Any = spec
+    for part in parts:
+        if isinstance(current, dict) and part in current:
+            current = current[part]
+        else:
+            return None
+    return current
+
+
+def _validate_refs_strict(spec: dict[str, Any]) -> None:
+    """
+    Validate that all `$ref` nodes in the spec are internal and resolvable.
+
+    This is intentionally conservative: DevEx Agent currently doesn't support external `$ref`.
+    """
+
+    def walk(node: Any, path: str) -> None:
+        if isinstance(node, dict):
+            ref = node.get("$ref")
+            if isinstance(ref, str):
+                if not ref.startswith("#/"):
+                    raise ValueError(f"Unsupported external $ref: {ref} at {path}")
+                target = _resolve_ref_target(spec, ref)
+                if not isinstance(target, dict):
+                    raise ValueError(f"Unresolved $ref: {ref} at {path}")
+            for k, v in node.items():
+                key = k if isinstance(k, str) else "<non-string-key>"
+                walk(v, f"{path}.{key}")
+            return
+        if isinstance(node, list):
+            for i, item in enumerate(node):
+                walk(item, f"{path}[{i}]")
+
+    walk(spec, "spec")
+
+
+def _validate_content_types_strict(spec: dict[str, Any], operations: list[Any]) -> None:
+    supported = "application/json, application/*+json"
+
+    def validate_content(content: Any, *, context: str) -> None:
+        if not isinstance(content, dict) or not content:
+            return
+        keys = [k for k in content.keys() if isinstance(k, str)]
+        if any(_is_json_like_content_type(k) for k in keys):
+            return
+        rendered = ", ".join(keys) if keys else "<unknown>"
+        raise ValueError(
+            f"Unsupported content type(s) for {context}: {rendered} (supported: {supported})"
+        )
+
+    def resolve_ref_dict(node: Any, *, context: str) -> dict[str, Any]:
+        if not isinstance(node, dict):
+            return {}
+        ref = node.get("$ref")
+        if isinstance(ref, str):
+            target = _resolve_ref_target(spec, ref)
+            if isinstance(target, dict):
+                return target
+            raise ValueError(f"Unresolved $ref: {ref} at {context}")
+        return node
+
+    for op in operations:
+        # `operations` is a list of _OperationRef. Keep this function loosely typed.
+        path = getattr(op, "path", "<path>")
+        method = getattr(op, "method", "<method>")
+        operation = getattr(op, "operation", {}) or {}
+        if not isinstance(operation, dict):
+            continue
+
+        rb = operation.get("requestBody")
+        if rb is not None:
+            resolved = resolve_ref_dict(rb, context=f"requestBody for {method.upper()} {path}")
+            validate_content(
+                resolved.get("content"),
+                context=f"requestBody for {method.upper()} {path}",
+            )
+
+        responses = operation.get("responses") or {}
+        if not isinstance(responses, dict):
+            continue
+        for status, resp in responses.items():
+            resolved = resolve_ref_dict(
+                resp,
+                context=f"response {status} for {method.upper()} {path}",
+            )
+            validate_content(
+                resolved.get("content"),
+                context=f"response {status} for {method.upper()} {path}",
+            )
+
+
+def _validate_spec_strict(spec: dict[str, Any], operations: list[Any]) -> None:
+    _validate_refs_strict(spec)
+    _validate_content_types_strict(spec, operations)
+
+
 def generate_markdown(
     spec: dict[str, Any],
     options: RenderOptions | None = None,
@@ -146,6 +247,8 @@ def generate_markdown(
     lines.append("")
 
     operations = _collect_operations(spec)
+    if opts.strict:
+        _validate_spec_strict(spec, operations)
     tag_meta = _tag_metadata(spec)
     if opts.include_toc:
         _render_toc(lines, operations, group_by_tag=opts.group_by_tag, tag_meta=tag_meta)
@@ -220,6 +323,7 @@ def generate_html(
         include_curl=opts.include_curl,
         include_toc=False,
         group_by_tag=opts.group_by_tag,
+        strict=opts.strict,
     )
     md = generate_markdown(spec, md_opts, base_url_override=base_url_override, server=server)
     body = markdown.markdown(md, extensions=["fenced_code", "tables"])
@@ -479,8 +583,9 @@ def _render_operation(
             if request_example is not None:
                 lines.append(f"Example ({request_content_type}):")
                 lines.append("")
-                lines.append("```json")
-                lines.append(json.dumps(request_example, indent=2))
+                fence = _code_fence_language(request_content_type)
+                lines.append(f"```{fence}")
+                lines.append(_format_example(request_example, request_content_type))
                 lines.append("```")
                 lines.append("")
         else:
@@ -530,8 +635,10 @@ def _render_operation(
                     lines.append("")
                     lines.append(f"  Example ({content_type}):")
                     lines.append("")
-                    lines.append("  ```json")
-                    lines.append("  " + json.dumps(example, indent=2).replace("\n", "\n  "))
+                    fence = _code_fence_language(content_type)
+                    lines.append(f"  ```{fence}")
+                    formatted = _format_example(example, content_type).replace("\n", "\n  ")
+                    lines.append("  " + formatted)
                     lines.append("  ```")
         lines.append("")
 
@@ -552,11 +659,15 @@ def _collect_parameters(
 def _example_from_content(content: dict[str, Any], spec: dict[str, Any]) -> tuple[Any | None, str]:
     if not content:
         return None, ""
-    content_type = "application/json" if "application/json" in content else next(iter(content))
+    content_type = _pick_content_type(content)
     media = content.get(content_type, {})
+    if not isinstance(media, dict):
+        return None, content_type
     if "example" in media:
         return media["example"], content_type
-    schema = media.get("schema", {})
+    schema = media.get("schema", {}) or {}
+    if not isinstance(schema, dict):
+        return None, content_type
     example = example_from_schema(schema, spec, depth=0)
     return example, content_type
 
@@ -981,22 +1092,57 @@ def _html_nav(
     return "\n".join(out)
 
 
+def _is_json_like_content_type(content_type: str) -> bool:
+    ct = content_type.split(";", 1)[0].strip().lower()
+    return ct == "application/json" or ct.endswith("+json")
+
+
 def _pick_content_type(content: dict[str, Any]) -> str:
+    """
+    Prefer JSON-ish content types so examples are renderable and curl defaults are stable.
+    """
     if not content:
         return ""
     if "application/json" in content:
         return "application/json"
+    for ct in content.keys():
+        if isinstance(ct, str) and _is_json_like_content_type(ct):
+            return ct
     return next(iter(content))
 
 
 def _pick_accept_content_type(responses: dict[str, Any]) -> str:
+    """
+    Choose a reasonable default for curl `Accept:` across responses.
+    """
+    candidates: list[str] = []
     for status in sorted(responses.keys()):
         response = responses[status]
+        if not isinstance(response, dict):
+            continue
         content = response.get("content", {}) or {}
-        content_type = _pick_content_type(content)
-        if content_type:
-            return content_type
-    return ""
+        if not isinstance(content, dict) or not content:
+            continue
+        candidates.append(_pick_content_type(content))
+    for ct in candidates:
+        if ct == "application/json":
+            return ct
+    for ct in candidates:
+        if _is_json_like_content_type(ct):
+            return ct
+    return candidates[0] if candidates else ""
+
+
+def _code_fence_language(content_type: str) -> str:
+    return "json" if (content_type and _is_json_like_content_type(content_type)) else "text"
+
+
+def _format_example(example: Any, content_type: str) -> str:
+    if _is_json_like_content_type(content_type):
+        return json.dumps(example, indent=2)
+    if isinstance(example, str):
+        return example
+    return json.dumps(example, indent=2)
 
 
 def _rendered_url(base_url: str, path: str, query_params: dict[str, str]) -> str:
@@ -1194,10 +1340,16 @@ def _curl_example(
         tokens.extend(["-H", f"Content-Type: {request_content_type}"])
 
     if request_content_type and method.lower() in {"post", "put", "patch"}:
+        json_like = _is_json_like_content_type(request_content_type)
         if include_examples and request_example is not None:
-            body = json.dumps(request_example, separators=(",", ":"), ensure_ascii=False)
+            if json_like:
+                body = json.dumps(request_example, separators=(",", ":"), ensure_ascii=False)
+            else:
+                body = request_example if isinstance(request_example, str) else json.dumps(
+                    request_example, separators=(",", ":"), ensure_ascii=False
+                )
             tokens.extend(["--data-raw", body])
         else:
-            tokens.extend(["--data-raw", "<JSON_BODY>"])
+            tokens.extend(["--data-raw", "<JSON_BODY>" if json_like else "<REQUEST_BODY>"])
 
     return _format_curl(tokens)

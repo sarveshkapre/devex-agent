@@ -12,6 +12,7 @@ Product teams ship APIs faster than docs can keep up. DevEx Agent turns any Open
 - `curl` examples per endpoint (base URL, params, request body, auth placeholders)
 - Table of contents + endpoints grouped by tag
 - Security summary per endpoint (based on OpenAPI `security`)
+- `--strict` mode: fail generation on unresolved `$ref` and unsupported request/response content types
 - Watch mode for local specs
 - CLI-first, friendly output
 
@@ -47,6 +48,18 @@ devex-agent ./openapi.yaml --output ./API.md --watch
 ```bash
 # `--format` is inferred from the output extension when omitted.
 devex-agent ./openapi.yaml --output ./API.html
+```
+
+## Strict mode
+By default, DevEx Agent is best-effort. Use `--strict` to fail fast when a spec contains
+unresolved `$ref` or request/response bodies that DevEx Agent can't render.
+
+Supported request/response content types for strict mode:
+- `application/json`
+- `application/*+json`
+
+```bash
+devex-agent ./openapi.yaml --strict --output ./API.md
 ```
 
 ## Docker

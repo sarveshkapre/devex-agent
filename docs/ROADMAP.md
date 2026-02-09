@@ -2,6 +2,7 @@
 
 ## Shipped
 - HTML export with a minimal theme and endpoint filtering.
+- Strict mode: `--strict` fails on unresolved `$ref` and unsupported request/response content types.
 - Base URL controls: `--server` selection, `--base-url` override, and server-variable expansion for stable `curl` examples.
 - Reduce CLI friction: infer output format from `--output` extension (e.g. `.md` vs `.html`).
 - Add `--list-servers` to make `--server` discoverable.
@@ -10,7 +11,6 @@
 - Improved schema example fidelity (including discriminator-aware `oneOf`/`anyOf` handling).
 
 ## Near-term
-- Add `--strict` mode for unresolved `$ref` / unsupported content types.
 - Improve schema example fidelity on more real-world OpenAPI specs (continue adding fixtures/tests).
 
 ## Later

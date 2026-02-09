@@ -7,6 +7,8 @@
 - Add regression fixtures/tests for `requestBody` `$ref` handling and malformed path entries.
 - Improve example generation for `oneOf`/`anyOf` with discriminator-aware variant selection and null-variant avoidance.
 - Add HTML export via `--format html` with minimal theme and static endpoint filter/search.
+- Add `--strict` mode to fail generation on unresolved `$ref` and unsupported request/response content types.
+- Render non-JSON body examples with `text` fences and avoid emitting JSON payloads for non-JSON `curl` bodies.
 - Infer output format from `--output` extension when `--format` is not provided.
 - Accept `devex-agent generate <spec>` as a compatibility alias for single-command mode.
 - Add Base URL controls: `--server` selection, `--base-url` override, and server-variable expansion for stable `curl` URLs.

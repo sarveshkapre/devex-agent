@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from devex_agent.generator import RenderOptions, generate_html, generate_markdown, load_spec
 
 
@@ -164,3 +166,27 @@ def test_base_url_override_wins_over_spec_servers() -> None:
 
     assert "- Base URL: https://override.example.test" in markdown
     assert "https://override.example.test/pets" in markdown
+
+
+def test_strict_mode_fails_on_unresolved_ref() -> None:
+    spec_path = Path(__file__).parent / "fixtures" / "unresolved_ref.yaml"
+    spec = load_spec(str(spec_path))
+    with pytest.raises(ValueError) as exc:
+        _ = generate_markdown(spec, RenderOptions(strict=True))
+    assert "Unresolved $ref:" in str(exc.value)
+
+
+def test_strict_mode_fails_on_unsupported_content_types() -> None:
+    spec_path = Path(__file__).parent / "fixtures" / "unsupported_content_type.yaml"
+    spec = load_spec(str(spec_path))
+    with pytest.raises(ValueError, match=r"Unsupported content type"):
+        _ = generate_markdown(spec, RenderOptions(strict=True))
+
+
+def test_non_strict_renders_text_plain_examples_as_text() -> None:
+    spec_path = Path(__file__).parent / "fixtures" / "unsupported_content_type.yaml"
+    spec = load_spec(str(spec_path))
+    markdown = generate_markdown(spec, RenderOptions())
+
+    assert "Example (text/plain):" in markdown
+    assert "```text" in markdown

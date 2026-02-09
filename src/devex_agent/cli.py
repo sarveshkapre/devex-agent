@@ -51,6 +51,11 @@ def generate(
     ),
     watch: bool = typer.Option(False, "--watch", help="Watch local spec file for changes."),
     interval: float = typer.Option(1.0, "--interval", help="Watch poll interval in seconds."),
+    strict: bool = typer.Option(
+        False,
+        "--strict",
+        help="Fail generation on unresolved $ref and unsupported request/response content types.",
+    ),
     no_examples: bool = typer.Option(False, "--no-examples", help="Skip example generation."),
     no_curl: bool = typer.Option(False, "--no-curl", help="Skip generating curl examples."),
     no_toc: bool = typer.Option(False, "--no-toc", help="Skip generating a table of contents."),
@@ -81,6 +86,7 @@ def generate(
         include_curl=not no_curl,
         include_toc=not no_toc,
         group_by_tag=not no_group_by_tag,
+        strict=strict,
     )
 
     fmt_in = (format or "").strip().lower()

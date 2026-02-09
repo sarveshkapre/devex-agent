@@ -87,3 +87,21 @@ def test_invalid_yaml_exits_2_with_friendly_message() -> None:
         result = runner.invoke(get_command(app), ["bad.yaml", "--output", "out.md"])
         assert result.exit_code == 2, result.output
         assert "Failed to parse OpenAPI spec as JSON or YAML:" in result.output
+
+
+def test_strict_mode_exits_2_on_unresolved_ref() -> None:
+    spec_path = (Path(__file__).parent / "fixtures" / "unresolved_ref.yaml").resolve()
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        result = runner.invoke(get_command(app), [str(spec_path), "--strict", "--output", "out.md"])
+        assert result.exit_code == 2, result.output
+        assert "Unresolved $ref:" in result.output
+
+
+def test_strict_mode_exits_2_on_unsupported_content_types() -> None:
+    spec_path = (Path(__file__).parent / "fixtures" / "unsupported_content_type.yaml").resolve()
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        result = runner.invoke(get_command(app), [str(spec_path), "--strict", "--output", "out.md"])
+        assert result.exit_code == 2, result.output
+        assert "Unsupported content type(s)" in result.output
