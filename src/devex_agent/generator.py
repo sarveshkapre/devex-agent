@@ -277,9 +277,16 @@ def example_from_schema(schema: dict[str, Any], spec: dict[str, Any], depth: int
 
     for key in ("oneOf", "anyOf"):
         if key in schema and schema[key]:
-            return example_from_schema(schema[key][0], spec, depth + 1)
+            chosen, disc_prop, disc_value = _choose_variant_schema(schema, key=key, spec=spec)
+            example = example_from_schema(chosen, spec, depth + 1)
+            if disc_prop and isinstance(example, dict) and disc_prop not in example:
+                # Ensure discriminator shows up even when it isn't marked required.
+                example[disc_prop] = disc_value
+            return example
 
     schema_type = schema.get("type")
+    if isinstance(schema_type, list):
+        schema_type = _pick_non_null_type(schema_type)
 
     if schema_type == "object" or "properties" in schema:
         properties = schema.get("properties", {})
@@ -321,12 +328,137 @@ def example_from_schema(schema: dict[str, Any], spec: dict[str, Any], depth: int
     return None
 
 
+def _pick_non_null_type(types: list[Any]) -> str | None:
+    for t in types:
+        if isinstance(t, str) and t != "null":
+            return t
+    # If everything is null/unknown, keep the first string entry.
+    for t in types:
+        if isinstance(t, str):
+            return t
+    return None
+
+
+def _is_null_schema(schema: dict[str, Any]) -> bool:
+    t = schema.get("type")
+    if t == "null":
+        return True
+    if isinstance(t, list):
+        # Treat union types that include non-null as non-null.
+        return all(isinstance(x, str) and x == "null" for x in t)
+    return False
+
+
+def _choose_variant_schema(
+    schema: dict[str, Any], *, key: str, spec: dict[str, Any]
+) -> tuple[dict[str, Any], str | None, Any | None]:
+    """
+    Choose a stable variant for oneOf/anyOf example generation.
+
+    Heuristics:
+    - Prefer discriminator mapping when present.
+    - Avoid explicit null schemas.
+    - Prefer object-like schemas (more informative) and those that contain the discriminator
+      property.
+    """
+    variants = schema.get(key) or []
+    if not isinstance(variants, list) or not variants:
+        return {}, None, None
+
+    discriminator = schema.get("discriminator")
+    disc_prop: str | None = None
+    mapping: dict[str, Any] = {}
+    if isinstance(discriminator, dict):
+        prop = discriminator.get("propertyName")
+        if isinstance(prop, str) and prop.strip():
+            disc_prop = prop.strip()
+        map_obj = discriminator.get("mapping") or {}
+        if isinstance(map_obj, dict):
+            mapping = map_obj
+
+    # First try: pick the first mapped variant (stable) and propagate its discriminator value.
+    if disc_prop and mapping:
+        for disc_value, mapped_ref in mapping.items():
+            if not isinstance(disc_value, str):
+                continue
+            if not isinstance(mapped_ref, str):
+                continue
+            for variant in variants:
+                if not isinstance(variant, dict):
+                    continue
+                if variant.get("$ref") == mapped_ref:
+                    return variant, disc_prop, disc_value
+
+    def score_variant(variant: dict[str, Any]) -> int:
+        resolved = _resolve_ref(variant, spec) if "$ref" in variant else variant
+        if not isinstance(resolved, dict):
+            return -10_000
+        if _is_null_schema(resolved):
+            return -10_000
+
+        score = 0
+        schema_type = resolved.get("type")
+        if isinstance(schema_type, list):
+            schema_type = _pick_non_null_type(schema_type)
+
+        if schema_type == "object" or "properties" in resolved:
+            score += 100
+        props = resolved.get("properties") or {}
+        if isinstance(props, dict):
+            score += min(len(props), 10)
+            if disc_prop and disc_prop in props:
+                score += 50
+        req = resolved.get("required") or []
+        if isinstance(req, list):
+            score += min(len([x for x in req if isinstance(x, str)]), 10) * 3
+        return score
+
+    best: dict[str, Any] | None = None
+    best_score = -10_001
+    for variant in variants:
+        if not isinstance(variant, dict):
+            continue
+        s = score_variant(variant)
+        if s > best_score:
+            best_score = s
+            best = variant
+
+    if best is not None:
+        chosen = best
+    else:
+        chosen = cast(dict[str, Any], variants[0]) if isinstance(variants[0], dict) else {}
+
+    # Determine a reasonable discriminator value (if requested).
+    if disc_prop:
+        resolved = _resolve_ref(chosen, spec) if "$ref" in chosen else chosen
+        if isinstance(resolved, dict):
+            properties = resolved.get("properties")
+            disc_schema = properties.get(disc_prop) if isinstance(properties, dict) else None
+            if isinstance(disc_schema, dict):
+                enum = disc_schema.get("enum")
+                if isinstance(enum, list) and enum:
+                    return chosen, disc_prop, enum[0]
+
+        if mapping:
+            for disc_value in mapping.keys():
+                if isinstance(disc_value, str):
+                    return chosen, disc_prop, disc_value
+
+        if isinstance(chosen, dict) and isinstance(chosen.get("$ref"), str):
+            return chosen, disc_prop, chosen["$ref"].split("/")[-1]
+
+        return chosen, disc_prop, "variant"
+
+    return chosen, None, None
+
+
 def _schema_type(schema: dict[str, Any]) -> str:
     if "$ref" in schema:
         return str(schema["$ref"].split("/")[-1])
     schema_type = schema.get("type", "object")
     if isinstance(schema_type, list) and schema_type:
-        return str(schema_type[0])
+        picked = _pick_non_null_type(schema_type)
+        return str(picked) if picked is not None else str(schema_type[0])
     return str(schema_type)
 
 

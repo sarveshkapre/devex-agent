@@ -108,3 +108,27 @@ def test_ignores_malformed_path_items_instead_of_crashing() -> None:
 
     assert "`GET /valid`" in markdown
     assert "`GET /broken-operation`" not in markdown
+
+
+def test_oneof_discriminator_prefers_mapped_variant_and_includes_discriminator() -> None:
+    spec_path = Path(__file__).parent / "fixtures" / "oneof_discriminator.yaml"
+    spec = load_spec(str(spec_path))
+    markdown = generate_markdown(spec, RenderOptions())
+
+    assert "`POST /pet`" in markdown
+    # Prefer the first discriminator mapping (cat) and include its required property.
+    assert "\"huntingSkill\": \"string\"" in markdown
+    assert "\"petType\": \"cat\"" in markdown
+
+
+def test_oneof_avoids_null_variant_when_generating_examples() -> None:
+    from devex_agent.generator import example_from_schema
+
+    spec_path = Path(__file__).parent / "fixtures" / "oneof_discriminator.yaml"
+    spec = load_spec(str(spec_path))
+    schema = spec["components"]["schemas"]["PetOrNull"]
+    example = example_from_schema(schema, spec, depth=0)
+
+    assert isinstance(example, dict)
+    assert example.get("petType") == "cat"
+    assert "huntingSkill" in example
