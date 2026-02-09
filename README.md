@@ -17,7 +17,7 @@ Product teams ship APIs faster than docs can keep up. DevEx Agent turns any Open
 
 ## Quickstart
 ```bash
-python -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
 pip install -e .
 
@@ -28,6 +28,9 @@ devex-agent ./openapi.yaml --output ./API.md
 By default, DevEx Agent uses the first OpenAPI `servers[0].url` as the Base URL for the overview and `curl` examples.
 
 ```bash
+# List available servers (1-based indexes).
+devex-agent ./openapi.yaml --list-servers
+
 # Choose a different OpenAPI server (1-based index).
 devex-agent ./openapi.yaml --server 2 --output ./API.md
 

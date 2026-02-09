@@ -7,12 +7,19 @@
 - Gaps found during codebase exploration
 
 ## Candidate Features To Do
-- [ ] P2 - Add multi-file spec merging support for split OpenAPI specs (roadmap later item). (Impact 4/5, Effort 4/5, Strategic fit 4/5, Differentiation 3/5, Risk 4/5, Confidence 2/5)
+- [ ] P2 (Cycle 3) - Add `--strict` mode: fail generation if `$ref` cannot be resolved, or if request/response bodies can’t be rendered for a supported content type. (Impact 3/5, Effort 3/5, Strategic fit 4/5, Differentiation 2/5, Risk 3/5, Confidence 3/5)
+- [ ] P2 - Improve HTML UX: highlight active nav item, preserve search state in URL hash, and add a “copy anchor link” affordance for endpoints. (Impact 3/5, Effort 3/5, Strategic fit 3/5, Differentiation 2/5, Risk 2/5, Confidence 3/5)
 - [ ] P2 - Add spec diff mode to generate change-focused docs between two versions. (Impact 3/5, Effort 4/5, Strategic fit 3/5, Differentiation 3/5, Risk 3/5, Confidence 2/5)
+- [ ] P2 - Add multi-file spec merging support for split OpenAPI specs (roadmap later item). (Impact 4/5, Effort 4/5, Strategic fit 4/5, Differentiation 3/5, Risk 4/5, Confidence 2/5)
 - [ ] P3 - Add `--output-dir` mode to emit one file per tag (better UX for large specs). (Impact 3/5, Effort 4/5, Strategic fit 3/5, Differentiation 3/5, Risk 3/5, Confidence 2/5)
-- [ ] P3 - Add a `--strict` mode to fail generation if `$ref` cannot be resolved or content types are unsupported. (Impact 2/5, Effort 3/5, Strategic fit 3/5, Differentiation 2/5, Risk 2/5, Confidence 3/5)
+- [ ] P3 - Add a minimal `--serve` mode for generated HTML (local static server + optional `--watch` rebuild). (Impact 3/5, Effort 4/5, Strategic fit 3/5, Differentiation 2/5, Risk 3/5, Confidence 2/5)
+- [ ] P3 - Hosted docs preview. (Impact 4/5, Effort 5/5, Strategic fit 3/5, Differentiation 3/5, Risk 4/5, Confidence 1/5)
 
 ## Implemented
+- [x] 2026-02-09 - Hardened CLI errors and made server selection discoverable via `--list-servers`.
+  - Evidence: `src/devex_agent/cli.py`, `src/devex_agent/generator.py`, `tests/test_cli.py`, commit `a3ac5cd`, local `make check`, local `.venv/bin/devex-agent tests/fixtures/servers.yaml --list-servers`.
+- [x] 2026-02-09 - Refreshed docs to reduce onboarding friction and reflect shipped CLI behavior.
+  - Evidence: `README.md`, `docs/ROADMAP.md`, `docs/PROJECT.md`, `PLAN.md`, `AGENTS.md`.
 - [x] 2026-02-09 - Versioned the autonomous operating contract and session task list in-repo.
   - Evidence: `AGENTS.md`, `CLONE_FEATURES.md`, commit `1e12b18`, CI run `21814422097` (success).
 - [x] 2026-02-09 - Discriminator-aware `oneOf`/`anyOf` example generation (avoid null variants; include discriminator property when possible).
@@ -42,6 +49,7 @@
 
 ## Insights
 - CI failures across runs `21557668393` through `21557307241` shared the same root cause: `make check` assumed `.venv` activation.
+- On macOS, `python` may not exist (only `python3`), so docs should default to `python3 -m venv ...` for a smoother quickstart.
 - Typer is currently exposing single-command mode (`devex-agent <spec> ...`); accept `devex-agent generate <spec> ...` as a compatibility alias.
 - Regression coverage improved by adding fixtures for referenced request bodies and malformed path definitions.
 - Market scan (bounded, 2026-02-09): baseline expectations for OpenAPI doc generators include static HTML export, theming, and built-in search or endpoint navigation; many tools also offer interactive "try it" consoles and spec bundling/linting.

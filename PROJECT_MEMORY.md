@@ -120,6 +120,27 @@
 - Follow-ups:
   - Consider adding `--list-servers` (or richer error output) for specs with multiple servers.
 
+## Entry 2026-02-09 - CLI discoverability and failure-mode UX
+- Decision:
+  - Add `--list-servers` to print expanded OpenAPI `servers` URLs and exit.
+  - Emit friendly errors with stable exit codes for common failures (missing spec file, invalid JSON/YAML, URL fetch failures).
+- Why:
+  - Make `--server` selection discoverable and reduce “guesswork”.
+  - Avoid Python tracebacks for expected user errors and make CLI usage more predictable in automation.
+- Evidence:
+  - Commit: `a3ac5cd`
+  - Files:
+    - `src/devex_agent/cli.py`
+    - `src/devex_agent/generator.py`
+    - `tests/test_cli.py`
+  - Local verification:
+    - `make check` (pass; 21 tests)
+    - `.venv/bin/devex-agent tests/fixtures/servers.yaml --list-servers` (pass; prints expanded URLs)
+  - CI verification:
+    - Run `21830046340` (success)
+- Confidence: High
+- Trust Label: Verified (tests + smoke + CI)
+
 ## Mistakes And Fixes
 - 2026-02-09 - Mistake: assumed Typer required explicit subcommands and briefly implemented an unnecessary console-script wrapper.
   - Fix: validated actual CLI shape with `CliRunner` and implemented a compatibility alias (`generate` prefix) without changing the entrypoint.

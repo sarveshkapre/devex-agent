@@ -16,6 +16,6 @@ make dev
 ```
 
 ## Next 3 improvements
-1. Render HTML with a theme + search
-2. Improve schema example fidelity (discriminators, better `oneOf`)
-3. Add a simple HTML export (static site build)
+1. Add a `--strict` mode for unresolved `$ref` and unsupported content types.
+2. Improve HTML UX (navigation polish, active state, deep links).
+3. Multi-file spec merging for split OpenAPI specs.

@@ -4,8 +4,10 @@ One-line pitch: Turn any OpenAPI 3.x spec into clean, readable API docs (with ex
 
 ## Features
 - Generate Markdown docs from OpenAPI 3.0/3.1 (JSON/YAML)
+- Generate a self-contained HTML export with a minimal theme and endpoint filtering
 - Endpoint sections with parameters table
 - Request/response examples generated from schemas
+- Accurate Base URL selection via `--server` / `--base-url` for `curl` examples
 - Watch mode to re-generate on spec changes
 
 ## Risks / Unknowns
@@ -30,5 +32,5 @@ More details: `docs/PROJECT.md`
 - v0.1.0: MVP Markdown generator + examples + watch mode
 
 ## Next
-- Improve schema example fidelity (discriminators, better `oneOf`)
-- Consider HTML export with minimal theme + search
+- Add `--strict` mode for unresolved `$ref` / unsupported rendering cases
+- Improve schema example fidelity on more real-world OpenAPI specs
