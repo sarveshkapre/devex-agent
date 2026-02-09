@@ -146,6 +146,10 @@ def test_generate_html_includes_search_and_endpoint_navigation() -> None:
     assert "Filter endpoints" in page
     assert "<h1>Petstore API Docs</h1>" in page
     assert "data-label=\"GET /pets/{petId}" in page
+    assert "data-kind=\"op\"" in page
+    assert "href=\"#op=" in page
+    assert "URLSearchParams" in page
+    assert ".copylink" in page
 
 
 def test_server_selection_expands_server_variables_and_affects_curl_urls() -> None:

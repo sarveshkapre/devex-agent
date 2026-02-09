@@ -49,6 +49,8 @@ devex-agent ./openapi.yaml --output ./API.md --watch
 # `--format` is inferred from the output extension when omitted.
 devex-agent ./openapi.yaml --output ./API.html
 ```
+The HTML export includes endpoint navigation, filtering, and shareable deep links (filter state is kept
+in the URL hash).
 
 ## Strict mode
 By default, DevEx Agent is best-effort. Use `--strict` to fail fast when a spec contains

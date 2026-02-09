@@ -424,6 +424,24 @@ a:hover{text-decoration:underline}
   background: rgba(15,90,74,.08);
   text-decoration:none;
 }
+.nav a.active{
+  background: rgba(183,31,46,.10);
+  border: 1px solid rgba(183,31,46,.22);
+}
+.copylink{
+  margin-left: 10px;
+  padding: 4px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--rule);
+  background: rgba(255,255,255,.92);
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+.copylink:hover{
+  border-color: rgba(15,90,74,.35);
+  color: var(--ink);
+}
 .main{
   border:1px solid var(--rule);
   background: rgba(255,255,255,.84);
@@ -468,18 +486,181 @@ h1,h2,h3,h4{scroll-margin-top: 16px}
     js = """
 (function(){
   var input = document.getElementById('search');
-  var links = Array.prototype.slice.call(document.querySelectorAll('.nav a[data-label]'));
+  var nav = document.querySelector('.nav');
+  var navLinks = Array.prototype.slice.call(document.querySelectorAll('.nav a[data-target]'));
+  var endpointLinks = navLinks.filter(function(a){ return a.getAttribute('data-kind') === 'op'; });
+
   function norm(s){ return (s || '').toLowerCase(); }
-  function apply(){
-    var q = norm(input.value).trim();
-    links.forEach(function(a){
-      var label = norm(a.getAttribute('data-label'));
-      a.style.display = (q === '' || label.indexOf(q) !== -1) ? '' : 'none';
+
+  function parseState(){
+    var raw = (location.hash || '').slice(1);
+    if (!raw) return { q: '', target: null, kind: null, legacy: false };
+    if (raw.indexOf('=') !== -1){
+      var params = new URLSearchParams(raw);
+      var q = params.get('q') || '';
+      var op = params.get('op');
+      var tag = params.get('tag');
+      var kind = op ? 'op' : (tag ? 'tag' : null);
+      return { q: q, target: op || tag || null, kind: kind, legacy: false };
+    }
+    return { q: '', target: raw, kind: raw.indexOf('tag-') === 0 ? 'tag' : 'op', legacy: true };
+  }
+
+  function buildHash(q, kind, target){
+    var params = new URLSearchParams();
+    if (q) params.set('q', q);
+    if (kind === 'op' && target) params.set('op', target);
+    if (kind === 'tag' && target) params.set('tag', target);
+    var s = params.toString();
+    return s ? ('#' + s) : '';
+  }
+
+  function replaceHash(q, kind, target){
+    var h = buildHash(q, kind, target);
+    var base = location.href.split('#')[0];
+    history.replaceState(null, '', base + h);
+  }
+
+  function setActive(targetId){
+    navLinks.forEach(function(a){
+      a.classList.toggle('active', a.getAttribute('data-target') === targetId);
     });
   }
+
+  function scrollToId(targetId){
+    if (!targetId) return;
+    var el = document.getElementById(targetId);
+    if (el && el.scrollIntoView) el.scrollIntoView({ block: 'start' });
+  }
+
+  function applyFilter(q){
+    var qq = norm(q).trim();
+    endpointLinks.forEach(function(a){
+      var label = norm(a.getAttribute('data-label'));
+      a.style.display = (qq === '' || label.indexOf(qq) !== -1) ? '' : 'none';
+    });
+
+    // Hide tag headings when all endpoints in that section are filtered out.
+    if (!nav) return;
+    var tags = Array.prototype.slice.call(nav.querySelectorAll('.tag'));
+    tags.forEach(function(tagDiv){
+      var anyVisible = false;
+      var node = tagDiv.nextElementSibling;
+      while (node && !(node.classList && node.classList.contains('tag'))){
+        if (node.matches && node.matches('a[data-kind=\"op\"]') && node.style.display !== 'none'){
+          anyVisible = true;
+          break;
+        }
+        node = node.nextElementSibling;
+      }
+      tagDiv.style.display = anyVisible ? '' : 'none';
+    });
+  }
+
+  var currentTarget = null;
+  var currentKind = null;
+
+  function syncFromHash(){
+    var st = parseState();
+    if (input && st.q) input.value = st.q;
+    applyFilter(input ? input.value : '');
+
+    if (st.target){
+      currentTarget = st.target;
+      currentKind = st.kind;
+      setActive(currentTarget);
+      // Legacy hashes scroll natively; new hashes need explicit scrolling.
+      if (!st.legacy) scrollToId(st.target);
+    }
+
+    // If the user navigated via a legacy anchor (e.g. TOC in the body) and we have a filter,
+    // preserve it by rewriting to the structured hash format.
+    if (st.legacy && input && norm(input.value).trim()){
+      currentTarget = st.target;
+      currentKind = st.kind;
+      replaceHash(input.value.trim(), currentKind, currentTarget);
+    }
+  }
+
+  function addCopyButtons(){
+    var anchors = Array.prototype.slice.call(document.querySelectorAll('a[id^=\"op-\"]'));
+    anchors = anchors.concat(
+      Array.prototype.slice.call(document.querySelectorAll('a[id^=\"tag-\"]'))
+    );
+    anchors.forEach(function(a){
+      var id = a.id;
+      var kind = id.indexOf('tag-') === 0 ? 'tag' : 'op';
+      var h = a.nextElementSibling;
+      if (!h || !h.tagName || !/^H[1-6]$/.test(h.tagName)) return;
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'copylink';
+      btn.textContent = 'Copy link';
+      btn.addEventListener('click', function(){
+        var q = input ? input.value.trim() : '';
+        var hash = buildHash(q, kind, id);
+        var base = location.href.split('#')[0];
+        var url = base + hash;
+        var done = function(){
+          btn.textContent = 'Copied';
+          setTimeout(function(){ btn.textContent = 'Copy link'; }, 1200);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText){
+          navigator.clipboard.writeText(url).then(done, done);
+        } else {
+          done();
+        }
+      });
+      h.appendChild(btn);
+    });
+  }
+
+  function bindNavClicks(){
+    navLinks.forEach(function(a){
+      a.addEventListener('click', function(e){
+        var target = a.getAttribute('data-target');
+        var kind = a.getAttribute('data-kind');
+        if (!target || !kind) return;
+        e.preventDefault();
+        currentTarget = target;
+        currentKind = kind;
+        var h = buildHash(input ? input.value.trim() : '', currentKind, currentTarget);
+        location.hash = h ? h.slice(1) : '';
+        scrollToId(currentTarget);
+        setActive(currentTarget);
+      });
+    });
+  }
+
   if (input){
-    input.addEventListener('input', apply);
-    apply();
+    input.addEventListener('input', function(){
+      applyFilter(input.value);
+      replaceHash(input.value.trim(), currentKind, currentTarget);
+    });
+  }
+
+  window.addEventListener('hashchange', syncFromHash);
+  bindNavClicks();
+  addCopyButtons();
+  syncFromHash();
+
+  // Best-effort active highlight while scrolling.
+  if ('IntersectionObserver' in window){
+    var anchors = Array.prototype.slice.call(document.querySelectorAll('a[id^=\"op-\"]'));
+    anchors = anchors.concat(
+      Array.prototype.slice.call(document.querySelectorAll('a[id^=\"tag-\"]'))
+    );
+    var obs = new IntersectionObserver(function(entries){
+      entries.forEach(function(ent){
+        if (!ent.isIntersecting) return;
+        var id = ent.target && ent.target.id;
+        if (!id) return;
+        setActive(id);
+        currentTarget = id;
+        currentKind = id.indexOf('tag-') === 0 ? 'tag' : 'op';
+      });
+    }, { rootMargin: '-15% 0px -75% 0px', threshold: 0 });
+    anchors.forEach(function(a){ obs.observe(a); });
   }
 })();
 """
@@ -1068,7 +1249,10 @@ def _html_nav(
         for tag in _tag_order(operations, tag_meta):
             tag_anchor = f"tag-{_slugify(tag)}"
             tag_label = html.escape(tag)
-            out.append(f"<div class=\"tag\"><a href=\"#{tag_anchor}\">{tag_label}</a></div>")
+            out.append(
+                f"<div class=\"tag\"><a href=\"#tag={tag_anchor}\" "
+                f"data-kind=\"tag\" data-target=\"{tag_anchor}\">{tag_label}</a></div>"
+            )
             for op in operations:
                 if op.tag != tag:
                     continue
@@ -1077,8 +1261,11 @@ def _html_nav(
                 if summary:
                     label = f"{label} - {summary}"
                 label_escaped = html.escape(label, quote=True)
-                href = f"#{op.anchor_id}"
-                out.append(f"<a href=\"{href}\" data-label=\"{label_escaped}\">{label_escaped}</a>")
+                href = f"#op={op.anchor_id}"
+                out.append(
+                    f"<a href=\"{href}\" data-kind=\"op\" data-target=\"{op.anchor_id}\" "
+                    f"data-label=\"{label_escaped}\">{label_escaped}</a>"
+                )
     else:
         for op in operations:
             label = f"{op.method.upper()} {op.path}"
@@ -1086,8 +1273,11 @@ def _html_nav(
             if summary:
                 label = f"{label} - {summary}"
             label_escaped = html.escape(label, quote=True)
-            href = f"#{op.anchor_id}"
-            out.append(f"<a href=\"{href}\" data-label=\"{label_escaped}\">{label_escaped}</a>")
+            href = f"#op={op.anchor_id}"
+            out.append(
+                f"<a href=\"{href}\" data-kind=\"op\" data-target=\"{op.anchor_id}\" "
+                f"data-label=\"{label_escaped}\">{label_escaped}</a>"
+            )
 
     return "\n".join(out)
 
