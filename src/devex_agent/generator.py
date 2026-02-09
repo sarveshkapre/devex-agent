@@ -158,14 +158,19 @@ def _render_operation(
         lines.append("")
 
     request_body = operation.get("requestBody")
+    resolved_request_body: dict[str, Any] = {}
+    if isinstance(request_body, dict):
+        resolved_request_body = _resolve_ref(request_body, spec)
+
     request_content_type = ""
     request_example: Any | None = None
-    if request_body:
+    if resolved_request_body:
         lines.append("#### Request Body")
         lines.append("")
         if opts.include_examples:
             request_example, request_content_type = _example_from_content(
-                request_body.get("content", {}), spec
+                cast(dict[str, Any], resolved_request_body.get("content", {})),
+                spec,
             )
             if request_example is not None:
                 lines.append(f"Example ({request_content_type}):")
@@ -175,9 +180,13 @@ def _render_operation(
                 lines.append("```")
                 lines.append("")
         else:
-            request_content_type = _pick_content_type(request_body.get("content", {}))
+            request_content_type = _pick_content_type(
+                cast(dict[str, Any], resolved_request_body.get("content", {}))
+            )
 
     responses = operation.get("responses", {})
+    if not isinstance(responses, dict):
+        responses = {}
     accept_content_type = _pick_accept_content_type(responses)
 
     if opts.include_curl:
@@ -205,7 +214,10 @@ def _render_operation(
         lines.append("#### Responses")
         lines.append("")
         for status in sorted(responses.keys()):
-            response = responses[status]
+            response_obj = responses[status]
+            if not isinstance(response_obj, dict):
+                continue
+            response = _resolve_ref(response_obj, spec)
             description = response.get("description", "")
             lines.append(f"- **{status}**: {description}")
             if opts.include_examples:
@@ -384,11 +396,21 @@ class _OperationRef:
 
 def _collect_operations(spec: dict[str, Any]) -> list[_OperationRef]:
     paths: dict[str, Any] = spec.get("paths", {})
+    if not isinstance(paths, dict):
+        return []
+
     ops: list[_OperationRef] = []
     for path in sorted(paths.keys()):
+        if not isinstance(path, str):
+            continue
         path_item = paths[path]
-        for method in _sorted_methods(path_item.keys()):
-            operation = path_item[method]
+        if not isinstance(path_item, dict):
+            continue
+        methods = [m for m in path_item.keys() if isinstance(m, str)]
+        for method in _sorted_methods(methods):
+            operation = path_item.get(method)
+            if not isinstance(operation, dict):
+                continue
             tag = _primary_tag(operation)
             anchor_id = f"op-{_slugify(f'{method}-{path}')}"
             ops.append(

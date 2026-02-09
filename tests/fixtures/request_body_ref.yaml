@@ -1,0 +1,48 @@
+openapi: 3.0.3
+info:
+  title: Request Body Ref API
+  version: 1.0.0
+servers:
+  - url: https://api.request-body.test
+paths:
+  /pets:
+    post:
+      summary: Create pet
+      requestBody:
+        $ref: "#/components/requestBodies/CreatePet"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pet"
+components:
+  requestBodies:
+    CreatePet:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/NewPet"
+  schemas:
+    NewPet:
+      type: object
+      required:
+        - name
+        - age
+      properties:
+        name:
+          type: string
+        age:
+          type: integer
+    Pet:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+        name:
+          type: string

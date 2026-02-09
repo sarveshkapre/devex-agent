@@ -85,3 +85,26 @@ def test_allof_examples_merge_object_fields() -> None:
     assert "\"id\": \"string\"" in markdown
     assert "\"name\": \"string\"" in markdown
     assert "\"createdAt\": \"2025-01-01T00:00:00Z\"" in markdown
+
+
+def test_request_body_refs_render_examples_and_curl_payloads() -> None:
+    spec_path = Path(__file__).parent / "fixtures" / "request_body_ref.yaml"
+    spec = load_spec(str(spec_path))
+    markdown = generate_markdown(spec, RenderOptions())
+
+    assert "`POST /pets`" in markdown
+    assert "#### Request Body" in markdown
+    assert "\"name\": \"string\"" in markdown
+    assert "\"age\": 0" in markdown
+    assert "curl -X POST" in markdown
+    assert "Content-Type: application/json" in markdown
+    assert "--data-raw" in markdown
+
+
+def test_ignores_malformed_path_items_instead_of_crashing() -> None:
+    spec_path = Path(__file__).parent / "fixtures" / "malformed_paths.yaml"
+    spec = load_spec(str(spec_path))
+    markdown = generate_markdown(spec, RenderOptions(include_examples=False, include_curl=False))
+
+    assert "`GET /valid`" in markdown
+    assert "`GET /broken-operation`" not in markdown
