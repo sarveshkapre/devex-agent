@@ -7,8 +7,6 @@
 - Gaps found during codebase exploration
 
 ## Candidate Features To Do
-- [ ] P1 (Cycle 4, Selected) - Add `--strict` mode: fail generation on unresolved `$ref` and unsupported request/response body content types (default supported: JSON and `*+json`). Add fixtures + tests + docs. (Impact 4/5, Effort 3/5, Strategic fit 5/5, Differentiation 2/5, Risk 3/5, Confidence 4/5)
-- [ ] P1 (Cycle 4, Selected) - HTML UX polish: active nav highlight, shareable deep links that preserve filter state, and “copy link” affordances for tags/endpoints. (Impact 4/5, Effort 3/5, Strategic fit 4/5, Differentiation 2/5, Risk 2/5, Confidence 3/5)
 - [ ] P2 - Spec diff mode to generate change-focused docs between two versions. (Impact 3/5, Effort 4/5, Strategic fit 3/5, Differentiation 3/5, Risk 3/5, Confidence 2/5)
 - [ ] P2 - Multi-file spec merging support for split OpenAPI specs (roadmap later item). (Impact 4/5, Effort 4/5, Strategic fit 4/5, Differentiation 3/5, Risk 4/5, Confidence 2/5)
 - [ ] P3 - `--output-dir` mode to emit one file per tag (better UX for large specs). (Impact 3/5, Effort 4/5, Strategic fit 3/5, Differentiation 3/5, Risk 3/5, Confidence 2/5)
@@ -17,6 +15,10 @@
 - [ ] P3 - Hosted docs preview. (Impact 4/5, Effort 5/5, Strategic fit 3/5, Differentiation 3/5, Risk 4/5, Confidence 1/5)
 
 ## Implemented
+- [x] 2026-02-09 - Add `--strict` mode: fail generation on unresolved `$ref` and unsupported request/response body content types (supported: JSON and `*+json`).
+  - Evidence: `src/devex_agent/cli.py`, `src/devex_agent/generator.py`, `tests/test_cli.py`, `tests/test_generator.py`, `tests/fixtures/unresolved_ref.yaml`, `tests/fixtures/unsupported_content_type.yaml`, commit `87af3f0`, local `make check`, local `.venv/bin/devex-agent tests/fixtures/petstore.yaml --strict --output /tmp/devex-strict-ok.md`.
+- [x] 2026-02-09 - HTML UX polish: active nav highlight, shareable deep links (filter preserved in URL hash), and copy-link buttons for tags/endpoints.
+  - Evidence: `src/devex_agent/generator.py`, `tests/test_generator.py`, commit `d7d950e`, local `make check`, local `.venv/bin/devex-agent tests/fixtures/petstore.yaml --output /tmp/devex-html-ux.html`.
 - [x] 2026-02-09 - Hardened CLI errors and made server selection discoverable via `--list-servers`.
   - Evidence: `src/devex_agent/cli.py`, `src/devex_agent/generator.py`, `tests/test_cli.py`, commit `a3ac5cd`, local `make check`, local `.venv/bin/devex-agent tests/fixtures/servers.yaml --list-servers`.
 - [x] 2026-02-09 - Refreshed docs to reduce onboarding friction and reflect shipped CLI behavior.
@@ -63,6 +65,11 @@
 - Market scan (bounded, 2026-02-09): “strictness” and linting are first-class in adjacent tooling (unresolved `$ref` and unused components are common baseline checks in CLI linters). https://redocly.com/docs/cli/rules/built-in-rules
 - Market scan (bounded, 2026-02-09): multi-file specs and bundling/dereferencing are common needs; several CLIs explicitly support bundling OpenAPI specs into a single artifact. https://github.com/APIDevTools/swagger-cli
 - Market scan (bounded, 2026-02-09): interactive “Try It” consoles + multi-server selection are a common UX expectation in interactive doc components. https://stoplight.io/open-source/elements
+- Gap map (2026-02-09):
+  - Missing (strategic): multi-file spec merging/bundling, diff mode, interactive “try it” console (untrusted: based on external market scan).
+  - Weak: very-large-spec UX/perf (pagination/incremental render), richer theming controls for HTML.
+  - Parity: static single-file HTML export with navigation + filter, stable Base URL selection, fail-fast strict validation (trusted: local code/tests).
+  - Differentiator: schema-example fidelity heuristics (discriminator-aware `oneOf`/`anyOf`, `allOf` merge) and production-grade CLI error UX (trusted: local code/tests).
 
 ## Notes
 - This file is maintained by the autonomous clone loop.

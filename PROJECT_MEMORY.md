@@ -165,6 +165,47 @@
 - Confidence: High
 - Trust Label: Verified (local + CI)
 
+## Entry 2026-02-09 - Strict mode for refs and content types
+- Decision: Add `--strict` mode to fail generation on unresolved `$ref` and unsupported request/response content types (supported: `application/json`, `application/*+json`).
+- Why: DevEx Agent is often run in CI or release pipelines; best-effort rendering can mask broken specs and produce misleading examples when bodies aren’t JSON.
+- Evidence:
+  - Commits: `87af3f0`
+  - Files:
+    - `src/devex_agent/cli.py`
+    - `src/devex_agent/generator.py`
+    - `tests/test_cli.py`
+    - `tests/test_generator.py`
+    - `tests/fixtures/unresolved_ref.yaml`
+    - `tests/fixtures/unsupported_content_type.yaml`
+    - `README.md`
+    - `docs/ROADMAP.md`
+    - `docs/PROJECT.md`
+    - `docs/CHANGELOG.md`
+  - Local verification:
+    - `make check` (pass; 26 tests)
+    - `.venv/bin/devex-agent tests/fixtures/petstore.yaml --strict --output /tmp/devex-strict-ok.md` (pass)
+    - `.venv/bin/devex-agent tests/fixtures/unresolved_ref.yaml --strict --output /tmp/devex-strict-fail.md` (exit 2; prints unresolved `$ref`)
+    - `.venv/bin/devex-agent tests/fixtures/unsupported_content_type.yaml --strict --output /tmp/devex-strict-fail2.md` (exit 2; prints unsupported content type)
+- Confidence: High
+- Trust Label: Verified (tests + smoke)
+
+## Entry 2026-02-09 - HTML export: deep links, active nav, copy links
+- Decision: Improve the HTML export UX by making deep links shareable (preserve filter query in URL hash), highlighting the active nav item, and adding “Copy link” buttons for tags/endpoints.
+- Why: A static HTML artifact is only useful if it’s easy to navigate and share. Persisting filter state + stable deep links reduces friction in reviews and docs handoffs.
+- Evidence:
+  - Commits: `d7d950e`
+  - Files:
+    - `src/devex_agent/generator.py`
+    - `tests/test_generator.py`
+    - `README.md`
+    - `docs/CHANGELOG.md`
+  - Local verification:
+    - `make check` (pass; 26 tests)
+    - `.venv/bin/devex-agent tests/fixtures/petstore.yaml --output /tmp/devex-html-ux.html` (pass)
+    - `rg -n 'href=\"#op=|URLSearchParams|copylink' /tmp/devex-html-ux.html` (pass; confirms deep-link format + JS)
+- Confidence: Medium-High
+- Trust Label: Verified (tests + smoke)
+
 ## Mistakes And Fixes
 - 2026-02-09 - Mistake: assumed Typer required explicit subcommands and briefly implemented an unnecessary console-script wrapper.
   - Fix: validated actual CLI shape with `CliRunner` and implemented a compatibility alias (`generate` prefix) without changing the entrypoint.
