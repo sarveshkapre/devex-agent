@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from devex_agent.generator import RenderOptions, generate_markdown, load_spec
+from devex_agent.generator import RenderOptions, generate_html, generate_markdown, load_spec
 
 
 def test_render_options_are_constructible() -> None:
@@ -132,3 +132,15 @@ def test_oneof_avoids_null_variant_when_generating_examples() -> None:
     assert isinstance(example, dict)
     assert example.get("petType") == "cat"
     assert "huntingSkill" in example
+
+
+def test_generate_html_includes_search_and_endpoint_navigation() -> None:
+    spec_path = Path(__file__).parent / "fixtures" / "petstore.yaml"
+    spec = load_spec(str(spec_path))
+    page = generate_html(spec, RenderOptions())
+
+    assert "<!doctype html>" in page
+    assert "id=\"search\"" in page
+    assert "Filter endpoints" in page
+    assert "<h1>Petstore API Docs</h1>" in page
+    assert "data-label=\"GET /pets/{petId}" in page

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import html
 import json
 import re
 import shlex
@@ -9,6 +10,7 @@ from typing import Any, cast
 from urllib.parse import urlencode
 
 import httpx
+import markdown  # type: ignore[import-untyped]
 import yaml
 
 
@@ -106,6 +108,220 @@ def generate_markdown(spec: dict[str, Any], options: RenderOptions | None = None
             )
 
     return "\n".join(lines).rstrip() + "\n"
+
+
+def generate_html(spec: dict[str, Any], options: RenderOptions | None = None) -> str:
+    """
+    Generate a single self-contained HTML file with a minimal theme and client-side filtering.
+    """
+    opts = options or RenderOptions()
+
+    info = spec.get("info", {})
+    title = info.get("title", "API")
+    version = info.get("version", "unknown")
+    servers = spec.get("servers") or []
+    base_url = servers[0].get("url") if servers else ""
+
+    operations = _collect_operations(spec)
+    tag_meta = _tag_metadata(spec)
+    nav_html = _html_nav(operations, tag_meta=tag_meta, group_by_tag=opts.group_by_tag)
+
+    # The HTML renderer owns navigation, so suppress the Markdown "Contents" section.
+    md_opts = RenderOptions(
+        include_examples=opts.include_examples,
+        include_curl=opts.include_curl,
+        include_toc=False,
+        group_by_tag=opts.group_by_tag,
+    )
+    md = generate_markdown(spec, md_opts)
+    body = markdown.markdown(md, extensions=["fenced_code", "tables"])
+
+    page_title = html.escape(f"{title} API Docs")
+    subtitle_bits = [f"v{version}"]
+    if base_url:
+        subtitle_bits.append(base_url)
+    subtitle = " · ".join(html.escape(x) for x in subtitle_bits if x)
+
+    css = """
+:root{
+  --bg0:#fbfaf7;
+  --bg1:#ffffff;
+  --ink:#121212;
+  --muted:#5b5b5b;
+  --rule:#e7e3da;
+  --accent:#0f5a4a;
+  --accent2:#b71f2e;
+  --codebg:#0f172a;
+  --codeink:#e2e8f0;
+  --shadow: 0 18px 45px rgba(0,0,0,.08);
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  color:var(--ink);
+  background:
+    radial-gradient(1200px 600px at 10% 0%, rgba(15,90,74,.08), transparent 55%),
+    radial-gradient(900px 500px at 95% 15%, rgba(183,31,46,.08), transparent 50%),
+    linear-gradient(180deg, var(--bg0), var(--bg1) 40%);
+  font-family: ui-serif, "Iowan Old Style", "Palatino", "Palatino Linotype", serif;
+}
+a{color:var(--accent); text-decoration:none}
+a:hover{text-decoration:underline}
+.layout{
+  display:grid;
+  grid-template-columns: 320px 1fr;
+  gap: 18px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 22px;
+}
+.sidebar{
+  position: sticky;
+  top: 18px;
+  align-self: start;
+  border:1px solid var(--rule);
+  background: rgba(255,255,255,.78);
+  backdrop-filter: blur(6px);
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: var(--shadow);
+}
+.brand{
+  font-weight: 700;
+  letter-spacing: .2px;
+  margin: 0 0 2px 0;
+  font-size: 18px;
+}
+.subtitle{
+  margin: 0 0 12px 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.search{
+  width:100%;
+  border:1px solid var(--rule);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+  font-size: 14px;
+  background: #fff;
+}
+.nav{
+  margin-top: 12px;
+  max-height: calc(100vh - 220px);
+  overflow:auto;
+  padding-right: 6px;
+}
+.tag{
+  margin: 14px 0 8px 0;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .09em;
+  color: var(--muted);
+}
+.nav a{
+  display:block;
+  padding: 7px 8px;
+  border-radius: 10px;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+  font-size: 13px;
+  color: var(--ink);
+}
+.nav a:hover{
+  background: rgba(15,90,74,.08);
+  text-decoration:none;
+}
+.main{
+  border:1px solid var(--rule);
+  background: rgba(255,255,255,.84);
+  backdrop-filter: blur(6px);
+  border-radius: 14px;
+  padding: 18px 20px;
+  box-shadow: var(--shadow);
+  min-width: 0;
+}
+pre, code{
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+}
+pre{
+  background: var(--codebg);
+  color: var(--codeink);
+  padding: 14px 16px;
+  border-radius: 14px;
+  overflow:auto;
+}
+code{background: rgba(15,23,42,.06); padding: 0 4px; border-radius: 6px}
+pre code{background: transparent; padding: 0}
+table{
+  border-collapse: collapse;
+  width:100%;
+  overflow:hidden;
+  border-radius: 12px;
+  border:1px solid var(--rule);
+}
+th,td{padding:10px 10px; border-bottom:1px solid var(--rule); text-align:left; vertical-align:top}
+th{
+  background: rgba(15,90,74,.06);
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+}
+h1,h2,h3,h4{scroll-margin-top: 16px}
+@media (max-width: 980px){
+  .layout{grid-template-columns: 1fr; padding: 14px}
+  .sidebar{position: relative; top: 0}
+  .nav{max-height: 340px}
+}
+"""
+
+    js = """
+(function(){
+  var input = document.getElementById('search');
+  var links = Array.prototype.slice.call(document.querySelectorAll('.nav a[data-label]'));
+  function norm(s){ return (s || '').toLowerCase(); }
+  function apply(){
+    var q = norm(input.value).trim();
+    links.forEach(function(a){
+      var label = norm(a.getAttribute('data-label'));
+      a.style.display = (q === '' || label.indexOf(q) !== -1) ? '' : 'none';
+    });
+  }
+  if (input){
+    input.addEventListener('input', apply);
+    apply();
+  }
+})();
+"""
+
+    out: list[str] = []
+    out.append("<!doctype html>")
+    out.append("<html lang=\"en\">")
+    out.append("<head>")
+    out.append("  <meta charset=\"utf-8\">")
+    out.append("  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">")
+    out.append(f"  <title>{page_title}</title>")
+    out.append(f"  <style>{css}</style>")
+    out.append("</head>")
+    out.append("<body>")
+    out.append("  <div class=\"layout\">")
+    out.append("    <aside class=\"sidebar\">")
+    out.append(f"      <div class=\"brand\">{page_title}</div>")
+    out.append(f"      <div class=\"subtitle\">{subtitle}</div>")
+    out.append(
+        "      <input id=\"search\" class=\"search\" type=\"search\" "
+        "placeholder=\"Filter endpoints...\" aria-label=\"Filter endpoints\">"
+    )
+    out.append("      <nav class=\"nav\">")
+    out.append(nav_html)
+    out.append("      </nav>")
+    out.append("    </aside>")
+    out.append("    <main class=\"main\">")
+    out.append(body)
+    out.append("    </main>")
+    out.append("  </div>")
+    out.append(f"  <script>{js}</script>")
+    out.append("</body>")
+    out.append("</html>")
+    return "\n".join(out).rstrip() + "\n"
 
 
 def _sorted_methods(methods: Iterable[str]) -> list[str]:
@@ -640,6 +856,41 @@ def _render_toc(
                 label = f"{label} — {summary}"
             lines.append(f"- [{label}](#{op.anchor_id})")
     lines.append("")
+
+
+def _html_nav(
+    operations: list[_OperationRef], *, tag_meta: dict[str, str], group_by_tag: bool
+) -> str:
+    if not operations:
+        return ""
+
+    out: list[str] = []
+    if group_by_tag:
+        for tag in _tag_order(operations, tag_meta):
+            tag_anchor = f"tag-{_slugify(tag)}"
+            tag_label = html.escape(tag)
+            out.append(f"<div class=\"tag\"><a href=\"#{tag_anchor}\">{tag_label}</a></div>")
+            for op in operations:
+                if op.tag != tag:
+                    continue
+                label = f"{op.method.upper()} {op.path}"
+                summary = op.operation.get("summary") or ""
+                if summary:
+                    label = f"{label} - {summary}"
+                label_escaped = html.escape(label, quote=True)
+                href = f"#{op.anchor_id}"
+                out.append(f"<a href=\"{href}\" data-label=\"{label_escaped}\">{label_escaped}</a>")
+    else:
+        for op in operations:
+            label = f"{op.method.upper()} {op.path}"
+            summary = op.operation.get("summary") or ""
+            if summary:
+                label = f"{label} - {summary}"
+            label_escaped = html.escape(label, quote=True)
+            href = f"#{op.anchor_id}"
+            out.append(f"<a href=\"{href}\" data-label=\"{label_escaped}\">{label_escaped}</a>")
+
+    return "\n".join(out)
 
 
 def _pick_content_type(content: dict[str, Any]) -> str:

@@ -5,7 +5,7 @@ from pathlib import Path
 
 import typer
 
-from devex_agent.generator import RenderOptions, generate_markdown, load_spec
+from devex_agent.generator import RenderOptions, generate_html, generate_markdown, load_spec
 
 app = typer.Typer(add_completion=False, help="DevEx Agent: generate API docs from OpenAPI specs.")
 
@@ -14,6 +14,12 @@ app = typer.Typer(add_completion=False, help="DevEx Agent: generate API docs fro
 def generate(
     spec: str = typer.Argument(..., help="Path or URL to OpenAPI spec (JSON/YAML)."),
     output: str | None = typer.Option(None, "--output", "-o", help="Write output to file."),
+    format: str = typer.Option(
+        "md",
+        "--format",
+        "-f",
+        help="Output format: md or html.",
+    ),
     watch: bool = typer.Option(False, "--watch", help="Watch local spec file for changes."),
     interval: float = typer.Option(1.0, "--interval", help="Watch poll interval in seconds."),
     no_examples: bool = typer.Option(False, "--no-examples", help="Skip example generation."),
@@ -35,14 +41,22 @@ def generate(
         group_by_tag=not no_group_by_tag,
     )
 
+    fmt = format.strip().lower()
+    if fmt not in {"md", "markdown", "html"}:
+        typer.echo(f"Unsupported --format: {format} (expected: md|html)")
+        raise typer.Exit(code=2)
+
     def render_once() -> None:
         spec_data = load_spec(spec)
-        markdown = generate_markdown(spec_data, options)
+        if fmt in {"html"}:
+            rendered = generate_html(spec_data, options)
+        else:
+            rendered = generate_markdown(spec_data, options)
         if output:
-            Path(output).write_text(markdown, encoding="utf-8")
+            Path(output).write_text(rendered, encoding="utf-8")
             typer.echo(f"Wrote {output}")
         else:
-            typer.echo(markdown)
+            typer.echo(rendered)
 
     if not watch:
         render_once()

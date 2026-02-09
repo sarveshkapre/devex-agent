@@ -36,6 +36,10 @@
 - CI failures across runs `21557668393` through `21557307241` shared the same root cause: `make check` assumed `.venv` activation.
 - Typer is currently exposing single-command mode, so docs must use `devex-agent <spec> ...` instead of `devex-agent generate ...`.
 - Regression coverage improved by adding fixtures for referenced request bodies and malformed path definitions.
+- Market scan (bounded, 2026-02-09): baseline expectations for OpenAPI doc generators include static HTML export, theming, and built-in search or endpoint navigation; many tools also offer interactive "try it" consoles and spec bundling/linting.
+- Market scan source: Redocly CLI `build-docs` (static HTML output, theming/search options) https://redocly.com/docs/cli/commands/build-docs
+- Market scan source: Swagger UI (interactive browsing + "Try it out") https://github.com/swagger-api/swagger-ui
+- Market scan source: Stoplight Elements (embeddable components, "Try It") https://stoplight.io/open-source/elements
 
 ## Notes
 - This file is maintained by the autonomous clone loop.

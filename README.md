@@ -29,6 +29,11 @@ devex-agent ./openapi.yaml --output ./API.md
 devex-agent ./openapi.yaml --output ./API.md --watch
 ```
 
+## HTML export
+```bash
+devex-agent ./openapi.yaml --format html --output ./API.html
+```
+
 ## Docker
 ```bash
 docker build -t devex-agent .
