@@ -19,7 +19,7 @@
 - [x] 2026-02-09 - Hardened CLI errors and made server selection discoverable via `--list-servers`.
   - Evidence: `src/devex_agent/cli.py`, `src/devex_agent/generator.py`, `tests/test_cli.py`, commit `a3ac5cd`, local `make check`, local `.venv/bin/devex-agent tests/fixtures/servers.yaml --list-servers`.
 - [x] 2026-02-09 - Refreshed docs to reduce onboarding friction and reflect shipped CLI behavior.
-  - Evidence: `README.md`, `docs/ROADMAP.md`, `docs/PROJECT.md`, `PLAN.md`, `AGENTS.md`.
+  - Evidence: `README.md`, `docs/ROADMAP.md`, `docs/PROJECT.md`, `PLAN.md`, `AGENTS.md`, commit `ab5dcf5`, CI run `21830124938` (success).
 - [x] 2026-02-09 - Versioned the autonomous operating contract and session task list in-repo.
   - Evidence: `AGENTS.md`, `CLONE_FEATURES.md`, commit `1e12b18`, CI run `21814422097` (success).
 - [x] 2026-02-09 - Discriminator-aware `oneOf`/`anyOf` example generation (avoid null variants; include discriminator property when possible).

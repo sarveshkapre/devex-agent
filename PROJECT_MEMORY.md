@@ -141,6 +141,29 @@
 - Confidence: High
 - Trust Label: Verified (tests + smoke + CI)
 
+## Entry 2026-02-09 - Docs alignment and onboarding friction reduction
+- Decision:
+  - Update quickstart to default to `python3` (macOS-friendly).
+  - Document `--list-servers` alongside `--server` / `--base-url`.
+  - Refresh roadmap/project docs to reflect shipped behavior and current next steps.
+- Why:
+  - Reduce first-run friction and keep docs aligned with the CLI’s real capabilities.
+- Evidence:
+  - Commit: `ab5dcf5`
+  - Files:
+    - `README.md`
+    - `docs/ROADMAP.md`
+    - `docs/PROJECT.md`
+    - `PLAN.md`
+    - `AGENTS.md`
+    - `CLONE_FEATURES.md`
+  - Local verification:
+    - `make check` (pass; 21 tests)
+  - CI verification:
+    - Run `21830124938` (success)
+- Confidence: High
+- Trust Label: Verified (local + CI)
+
 ## Mistakes And Fixes
 - 2026-02-09 - Mistake: assumed Typer required explicit subcommands and briefly implemented an unnecessary console-script wrapper.
   - Fix: validated actual CLI shape with `CliRunner` and implemented a compatibility alias (`generate` prefix) without changing the entrypoint.
