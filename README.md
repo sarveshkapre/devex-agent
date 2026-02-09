@@ -24,6 +24,17 @@ pip install -e .
 devex-agent ./openapi.yaml --output ./API.md
 ```
 
+## Base URL selection
+By default, DevEx Agent uses the first OpenAPI `servers[0].url` as the Base URL for the overview and `curl` examples.
+
+```bash
+# Choose a different OpenAPI server (1-based index).
+devex-agent ./openapi.yaml --server 2 --output ./API.md
+
+# Or override explicitly (useful for staging/prod switches).
+devex-agent ./openapi.yaml --base-url https://staging.api.example.com --output ./API.md
+```
+
 ## Watch mode
 ```bash
 devex-agent ./openapi.yaml --output ./API.md --watch
@@ -31,7 +42,8 @@ devex-agent ./openapi.yaml --output ./API.md --watch
 
 ## HTML export
 ```bash
-devex-agent ./openapi.yaml --format html --output ./API.html
+# `--format` is inferred from the output extension when omitted.
+devex-agent ./openapi.yaml --output ./API.html
 ```
 
 ## Docker

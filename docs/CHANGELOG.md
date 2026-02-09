@@ -7,6 +7,10 @@
 - Add regression fixtures/tests for `requestBody` `$ref` handling and malformed path entries.
 - Improve example generation for `oneOf`/`anyOf` with discriminator-aware variant selection and null-variant avoidance.
 - Add HTML export via `--format html` with minimal theme and static endpoint filter/search.
+- Infer output format from `--output` extension when `--format` is not provided.
+- Accept `devex-agent generate <spec>` as a compatibility alias for single-command mode.
+- Add Base URL controls: `--server` selection, `--base-url` override, and server-variable expansion for stable `curl` URLs.
+- Align `devex_agent.__version__` with the packaged version.
 
 ## v0.1.6
 - Improve watch mode UX (initial render, clearer status, graceful Ctrl+C).
