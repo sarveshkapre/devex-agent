@@ -22,6 +22,57 @@ class RenderOptions:
     group_by_tag: bool = True
 
 
+def _expand_server_url(server: dict[str, Any]) -> str:
+    url = str(server.get("url") or "")
+    variables = server.get("variables") or {}
+    if not isinstance(variables, dict):
+        return url
+    for name, meta in variables.items():
+        if not isinstance(name, str) or not name:
+            continue
+        if not isinstance(meta, dict):
+            continue
+        value = meta.get("default")
+        if value is None:
+            enum = meta.get("enum")
+            if isinstance(enum, list) and enum:
+                value = enum[0]
+        if value is None:
+            continue
+        url = url.replace("{" + name + "}", str(value))
+    return url
+
+
+def _select_base_url(
+    spec: dict[str, Any],
+    *,
+    base_url_override: str | None = None,
+    server: int | None = None,
+) -> str:
+    """
+    Pick a base URL from OpenAPI `servers`.
+
+    - `base_url_override` wins if provided.
+    - `server` selects a 1-based server index (matching CLI UX).
+    - Server URL variables are expanded using defaults (or first enum item).
+    """
+    if base_url_override:
+        return base_url_override
+
+    servers = spec.get("servers") or []
+    if not isinstance(servers, list) or not servers:
+        return ""
+
+    idx = 0 if server is None else server - 1
+    if idx < 0 or idx >= len(servers):
+        raise ValueError(f"Invalid server index: {server} (expected 1..{len(servers)})")
+
+    server_obj = servers[idx] or {}
+    if not isinstance(server_obj, dict):
+        return ""
+    return _expand_server_url(server_obj)
+
+
 def load_spec(source: str, timeout_s: float = 10.0) -> dict[str, Any]:
     raw = _load_raw(source, timeout_s)
     try:
@@ -42,13 +93,18 @@ def _load_raw(source: str, timeout_s: float) -> str:
         return handle.read()
 
 
-def generate_markdown(spec: dict[str, Any], options: RenderOptions | None = None) -> str:
+def generate_markdown(
+    spec: dict[str, Any],
+    options: RenderOptions | None = None,
+    *,
+    base_url_override: str | None = None,
+    server: int | None = None,
+) -> str:
     opts = options or RenderOptions()
     info = spec.get("info", {})
     title = info.get("title", "API")
     version = info.get("version", "unknown")
-    servers = spec.get("servers") or []
-    base_url = servers[0].get("url") if servers else ""
+    base_url = _select_base_url(spec, base_url_override=base_url_override, server=server)
 
     lines: list[str] = []
     lines.append(f"# {title} API Docs")
@@ -110,7 +166,13 @@ def generate_markdown(spec: dict[str, Any], options: RenderOptions | None = None
     return "\n".join(lines).rstrip() + "\n"
 
 
-def generate_html(spec: dict[str, Any], options: RenderOptions | None = None) -> str:
+def generate_html(
+    spec: dict[str, Any],
+    options: RenderOptions | None = None,
+    *,
+    base_url_override: str | None = None,
+    server: int | None = None,
+) -> str:
     """
     Generate a single self-contained HTML file with a minimal theme and client-side filtering.
     """
@@ -119,8 +181,7 @@ def generate_html(spec: dict[str, Any], options: RenderOptions | None = None) ->
     info = spec.get("info", {})
     title = info.get("title", "API")
     version = info.get("version", "unknown")
-    servers = spec.get("servers") or []
-    base_url = servers[0].get("url") if servers else ""
+    base_url = _select_base_url(spec, base_url_override=base_url_override, server=server)
 
     operations = _collect_operations(spec)
     tag_meta = _tag_metadata(spec)
@@ -133,7 +194,7 @@ def generate_html(spec: dict[str, Any], options: RenderOptions | None = None) ->
         include_toc=False,
         group_by_tag=opts.group_by_tag,
     )
-    md = generate_markdown(spec, md_opts)
+    md = generate_markdown(spec, md_opts, base_url_override=base_url_override, server=server)
     body = markdown.markdown(md, extensions=["fenced_code", "tables"])
 
     page_title = html.escape(f"{title} API Docs")

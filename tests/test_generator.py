@@ -144,3 +144,23 @@ def test_generate_html_includes_search_and_endpoint_navigation() -> None:
     assert "Filter endpoints" in page
     assert "<h1>Petstore API Docs</h1>" in page
     assert "data-label=\"GET /pets/{petId}" in page
+
+
+def test_server_selection_expands_server_variables_and_affects_curl_urls() -> None:
+    spec_path = Path(__file__).parent / "fixtures" / "servers.yaml"
+    spec = load_spec(str(spec_path))
+    markdown = generate_markdown(spec, RenderOptions(), server=1)
+
+    assert "- Base URL: https://us.api.example.com/v1" in markdown
+    assert "https://us.api.example.com/v1/pets" in markdown
+
+
+def test_base_url_override_wins_over_spec_servers() -> None:
+    spec_path = Path(__file__).parent / "fixtures" / "servers.yaml"
+    spec = load_spec(str(spec_path))
+    markdown = generate_markdown(
+        spec, RenderOptions(), base_url_override="https://override.example.test"
+    )
+
+    assert "- Base URL: https://override.example.test" in markdown
+    assert "https://override.example.test/pets" in markdown

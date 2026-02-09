@@ -28,6 +28,16 @@ def generate(
         "-f",
         help="Output format: md or html. If omitted, inferred from --output extension.",
     ),
+    server: int | None = typer.Option(
+        None,
+        "--server",
+        help="Select OpenAPI server by 1-based index (affects Base URL and curl examples).",
+    ),
+    base_url: str | None = typer.Option(
+        None,
+        "--base-url",
+        help="Override Base URL (affects Base URL and curl examples).",
+    ),
     watch: bool = typer.Option(False, "--watch", help="Watch local spec file for changes."),
     interval: float = typer.Option(1.0, "--interval", help="Watch poll interval in seconds."),
     no_examples: bool = typer.Option(False, "--no-examples", help="Skip example generation."),
@@ -77,10 +87,18 @@ def generate(
 
     def render_once() -> None:
         spec_data = load_spec(spec_source)
-        if fmt in {"html"}:
-            rendered = generate_html(spec_data, options)
-        else:
-            rendered = generate_markdown(spec_data, options)
+        try:
+            if fmt in {"html"}:
+                rendered = generate_html(
+                    spec_data, options, base_url_override=base_url, server=server
+                )
+            else:
+                rendered = generate_markdown(
+                    spec_data, options, base_url_override=base_url, server=server
+                )
+        except ValueError as exc:
+            typer.echo(str(exc))
+            raise typer.Exit(code=2) from exc
         if output:
             Path(output).write_text(rendered, encoding="utf-8")
             typer.echo(f"Wrote {output}")
