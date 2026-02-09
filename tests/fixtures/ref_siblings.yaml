@@ -1,0 +1,25 @@
+openapi: 3.0.0
+info:
+  title: Ref Siblings
+  version: "1.0"
+paths:
+  /thing:
+    get:
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Thing"
+                example:
+                  id: override
+components:
+  schemas:
+    Thing:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
+

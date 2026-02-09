@@ -1,13 +1,15 @@
 from __future__ import annotations
 
+import copy
 import html
 import json
 import re
 import shlex
 from collections.abc import Iterable
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, cast
-from urllib.parse import urlencode
+from urllib.parse import urldefrag, urlencode
 
 import httpx
 import markdown  # type: ignore[import-untyped]
@@ -89,6 +91,19 @@ def load_spec(source: str, timeout_s: float = 10.0) -> dict[str, Any]:
     return cast(dict[str, Any], data)
 
 
+def load_spec_bundled(source: str, timeout_s: float = 10.0) -> dict[str, Any]:
+    """
+    Load an OpenAPI spec and bundle external *file-based* `$ref` by inlining them.
+
+    This enables split/multi-file specs that reference local YAML/JSON files via `$ref`.
+    """
+    if source.startswith("http://") or source.startswith("https://"):
+        raise ValueError("Bundling external $ref only supports local spec files (not URLs).")
+    base_dir = Path(source).resolve().parent
+    spec = load_spec(source, timeout_s=timeout_s)
+    return _bundle_external_refs(spec, base_dir=base_dir)
+
+
 def _load_raw(source: str, timeout_s: float) -> str:
     if source.startswith("http://") or source.startswith("https://"):
         try:
@@ -132,6 +147,223 @@ def _resolve_ref_target(spec: dict[str, Any], ref: str) -> Any:
         else:
             return None
     return current
+
+
+def _parse_json_pointer(pointer: str) -> list[str]:
+    # RFC 6901: leading "/" indicates segments; "~1" => "/", "~0" => "~"
+    if not pointer:
+        return []
+    if pointer.startswith("/"):
+        pointer = pointer[1:]
+    if not pointer:
+        return []
+    out: list[str] = []
+    for raw in pointer.split("/"):
+        out.append(raw.replace("~1", "/").replace("~0", "~"))
+    return out
+
+
+def _resolve_pointer(doc: Any, pointer: str) -> Any:
+    if pointer in {"", "/"}:
+        return doc
+    parts = _parse_json_pointer(pointer)
+    current: Any = doc
+    for part in parts:
+        if isinstance(current, dict) and part in current:
+            current = current[part]
+            continue
+        if isinstance(current, list):
+            try:
+                idx = int(part)
+            except ValueError:
+                return None
+            if idx < 0 or idx >= len(current):
+                return None
+            current = current[idx]
+            continue
+        return None
+    return current
+
+
+def _load_local_doc(path: Path) -> dict[str, Any]:
+    raw = path.read_text(encoding="utf-8")
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        try:
+            data = yaml.safe_load(raw)
+        except yaml.YAMLError as exc:
+            raise ValueError(f"Failed to parse referenced $ref file: {path}: {exc}") from exc
+    if not isinstance(data, dict):
+        raise ValueError(f"Referenced $ref file must be a JSON/YAML object: {path}")
+    return cast(dict[str, Any], data)
+
+
+def _bundle_external_refs(spec: dict[str, Any], *, base_dir: Path) -> dict[str, Any]:
+    """
+    Inline external file `$ref` nodes so the rest of the pipeline can treat the spec as single-file.
+
+    Strategy:
+    - For the root spec: keep internal refs (`#/...`) as-is (so components remain compact).
+    - For any external referenced document: inline its internal refs while extracting the subtree,
+      so the extracted content is self-contained after insertion.
+    """
+    doc_cache: dict[Path, dict[str, Any]] = {}
+    resolving: set[tuple[Path | None, str]] = set()
+
+    def resolve_node(
+        node: Any,
+        *,
+        current_doc: dict[str, Any],
+        current_dir: Path,
+        inline_internal: bool,
+        current_path: Path | None,
+    ) -> Any:
+        if isinstance(node, dict):
+            ref = node.get("$ref")
+            if isinstance(ref, str) and ref:
+                # Resolve if it is external, or if we are inside an extracted external subtree.
+                is_internal = ref.startswith("#")
+                should_resolve = (not is_internal) or inline_internal
+                if should_resolve:
+                    key = (current_path, ref)
+                    if key in resolving:
+                        raise ValueError(f"Cycle detected while bundling $ref: {ref}")
+                    resolving.add(key)
+                    try:
+                        resolved = _resolve_ref_any(
+                            ref,
+                            current_doc=current_doc,
+                            current_dir=current_dir,
+                            current_path=current_path,
+                            doc_cache=doc_cache,
+                        )
+                    finally:
+                        resolving.remove(key)
+
+                    # `$ref` siblings are common for docs (e.g. description). Overlay them.
+                    if isinstance(resolved, dict):
+                        out_ref = dict(resolved)
+                        for k, v in node.items():
+                            if k == "$ref":
+                                continue
+                            out_ref[k] = resolve_node(
+                                v,
+                                current_doc=current_doc,
+                                current_dir=current_dir,
+                                inline_internal=inline_internal,
+                                current_path=current_path,
+                            )
+                        return out_ref
+                    return resolved
+
+                # Root internal refs remain as-is (but still resolve non-$ref children).
+                out_keep: dict[str, Any] = {}
+                for k, v in node.items():
+                    out_keep[k] = resolve_node(
+                        v,
+                        current_doc=current_doc,
+                        current_dir=current_dir,
+                        inline_internal=inline_internal,
+                        current_path=current_path,
+                    )
+                return out_keep
+
+            # Regular dict: recurse.
+            out2: dict[str, Any] = {}
+            for k, v in node.items():
+                out2[k] = resolve_node(
+                    v,
+                    current_doc=current_doc,
+                    current_dir=current_dir,
+                    inline_internal=inline_internal,
+                    current_path=current_path,
+                )
+            return out2
+
+        if isinstance(node, list):
+            return [
+                resolve_node(
+                    item,
+                    current_doc=current_doc,
+                    current_dir=current_dir,
+                    inline_internal=inline_internal,
+                    current_path=current_path,
+                )
+                for item in node
+            ]
+        return node
+
+    def _resolve_ref_any(
+        ref: str,
+        *,
+        current_doc: dict[str, Any],
+        current_dir: Path,
+        current_path: Path | None,
+        doc_cache: dict[Path, dict[str, Any]],
+    ) -> Any:
+        # Internal ref relative to current_doc.
+        if ref.startswith("#"):
+            frag = ref[1:]  # includes leading "/" if present
+            target = _resolve_pointer(current_doc, frag)
+            if target is None:
+                raise ValueError(f"Unresolved $ref while bundling: {ref}")
+            # Inline internal refs within the extracted subtree to avoid leaking `#/...`
+            # pointers into the root document.
+            return resolve_node(
+                copy.deepcopy(target),
+                current_doc=current_doc,
+                current_dir=current_dir,
+                inline_internal=True,
+                current_path=current_path,
+            )
+
+        # External file reference (optionally with fragment).
+        if ref.startswith("http://") or ref.startswith("https://"):
+            raise ValueError(f"Unsupported external $ref URL while bundling: {ref}")
+
+        ref_path_str, frag = urldefrag(ref)
+        if not ref_path_str:
+            raise ValueError(f"Unsupported $ref while bundling: {ref}")
+        ref_path = Path(ref_path_str)
+        if not ref_path.is_absolute():
+            ref_path = (current_dir / ref_path).resolve()
+        if not ref_path.exists():
+            origin = str(current_path) if current_path else "<root>"
+            raise ValueError(f"Referenced $ref file not found: {ref_path_str} (from {origin})")
+        doc = doc_cache.get(ref_path)
+        if doc is None:
+            doc = _load_local_doc(ref_path)
+            doc_cache[ref_path] = doc
+        doc_dir = ref_path.parent
+        current_path2 = ref_path
+
+        target = _resolve_pointer(doc, frag)
+        if target is None:
+            frag_display = f"#{frag}" if frag else ""
+            origin = str(current_path) if current_path else "<root>"
+            raise ValueError(
+                f"Unresolved $ref while bundling: {ref_path_str}{frag_display} (from {origin})"
+            )
+        # Make extracted subtree self-contained by inlining internal refs within the external doc.
+        return resolve_node(
+            copy.deepcopy(target),
+            current_doc=doc,
+            current_dir=doc_dir,
+            inline_internal=True,
+            current_path=current_path2,
+        )
+
+    return cast(
+        dict[str, Any],
+        resolve_node(
+            spec,
+            current_doc=spec,
+            current_dir=base_dir,
+            inline_internal=False,
+            current_path=None,
+        ),
+    )
 
 
 def _validate_refs_strict(spec: dict[str, Any]) -> None:
@@ -1072,7 +1304,16 @@ def _resolve_ref(node: dict[str, Any], spec: dict[str, Any]) -> dict[str, Any]:
         else:
             return node
     if isinstance(current, dict):
-        return current
+        if len(node.keys()) == 1:
+            return current
+        # `$ref` siblings are ignored by the spec, but are commonly used in real-world specs
+        # for doc-friendly overrides (e.g. description/example). Overlay them for rendering.
+        merged = dict(current)
+        for k, v in node.items():
+            if k == "$ref":
+                continue
+            merged[k] = v
+        return merged
     return node
 
 

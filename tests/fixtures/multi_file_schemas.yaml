@@ -1,0 +1,26 @@
+components:
+  schemas:
+    PetsResponse:
+      type: object
+      required: [pets]
+      properties:
+        pets:
+          type: array
+          items:
+            $ref: "#/components/schemas/Pet"
+    Pet:
+      allOf:
+        - $ref: "#/components/schemas/BasePet"
+        - type: object
+          required: [id]
+          properties:
+            id:
+              type: string
+    BasePet:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [dog]
+

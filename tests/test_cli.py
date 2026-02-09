@@ -105,3 +105,28 @@ def test_strict_mode_exits_2_on_unsupported_content_types() -> None:
         result = runner.invoke(get_command(app), [str(spec_path), "--strict", "--output", "out.md"])
         assert result.exit_code == 2, result.output
         assert "Unsupported content type(s)" in result.output
+
+
+def test_strict_mode_exits_2_on_external_ref_without_bundle() -> None:
+    spec_path = (Path(__file__).parent / "fixtures" / "multi_file_root.yaml").resolve()
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        result = runner.invoke(get_command(app), [str(spec_path), "--strict", "--output", "out.md"])
+        assert result.exit_code == 2, result.output
+        assert "Unsupported external $ref:" in result.output
+
+
+def test_bundle_allows_external_ref_and_strict_passes() -> None:
+    spec_path = (Path(__file__).parent / "fixtures" / "multi_file_root.yaml").resolve()
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        result = runner.invoke(
+            get_command(app),
+            [str(spec_path), "--bundle", "--strict", "--output", "out.md"],
+        )
+        assert result.exit_code == 0, result.output
+        out = Path("out.md").read_text(encoding="utf-8")
+        # Ensure the external schema reference was bundled and its internal refs were inlined.
+        assert "\"pets\"" in out
+        assert "\"kind\": \"dog\"" in out
+        assert "\"id\": \"string\"" in out

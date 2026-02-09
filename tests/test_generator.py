@@ -194,3 +194,13 @@ def test_non_strict_renders_text_plain_examples_as_text() -> None:
 
     assert "Example (text/plain):" in markdown
     assert "```text" in markdown
+
+
+def test_ref_siblings_overlay_example_for_docs_rendering() -> None:
+    spec_path = Path(__file__).parent / "fixtures" / "ref_siblings.yaml"
+    spec = load_spec(str(spec_path))
+    markdown = generate_markdown(spec, RenderOptions(include_curl=False))
+
+    assert "`GET /thing`" in markdown
+    # The `example` sibling should override the referenced schema's generated example.
+    assert "\"id\": \"override\"" in markdown

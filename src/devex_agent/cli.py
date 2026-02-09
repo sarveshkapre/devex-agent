@@ -11,6 +11,7 @@ from devex_agent.generator import (
     generate_markdown,
     list_servers,
     load_spec,
+    load_spec_bundled,
 )
 
 app = typer.Typer(add_completion=False, help="DevEx Agent: generate API docs from OpenAPI specs.")
@@ -55,6 +56,11 @@ def generate(
         False,
         "--strict",
         help="Fail generation on unresolved $ref and unsupported request/response content types.",
+    ),
+    bundle: bool = typer.Option(
+        False,
+        "--bundle",
+        help="Inline external file $ref by bundling referenced local YAML/JSON files.",
     ),
     no_examples: bool = typer.Option(False, "--no-examples", help="Skip example generation."),
     no_curl: bool = typer.Option(False, "--no-curl", help="Skip generating curl examples."),
@@ -104,7 +110,7 @@ def generate(
 
     def render_once() -> None:
         try:
-            spec_data = load_spec(spec_source)
+            spec_data = load_spec_bundled(spec_source) if bundle else load_spec(spec_source)
         except FileNotFoundError:
             typer.echo(f"File not found: {spec_source}")
             raise typer.Exit(code=1) from None
