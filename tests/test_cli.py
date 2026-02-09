@@ -58,3 +58,32 @@ def test_server_selection_option_affects_output() -> None:
         assert result.exit_code == 0, result.output
         out = Path("out.md").read_text(encoding="utf-8")
         assert "- Base URL: https://us.api.example.com/v1" in out
+
+
+def test_list_servers_prints_expanded_urls_and_exits() -> None:
+    spec_path = (Path(__file__).parent / "fixtures" / "servers.yaml").resolve()
+    runner = CliRunner()
+    result = runner.invoke(get_command(app), [str(spec_path), "--list-servers"])
+    assert result.exit_code == 0, result.output
+    assert "Servers:" in result.output
+    assert "1. https://us.api.example.com/v1" in result.output
+    assert "2. https://eu.api.example.com/v1" in result.output
+
+
+def test_missing_spec_file_exits_1_with_friendly_message() -> None:
+    runner = CliRunner()
+    result = runner.invoke(get_command(app), ["./does-not-exist.yaml", "--output", "out.md"])
+    assert result.exit_code == 1, result.output
+    assert "File not found:" in result.output
+
+
+def test_invalid_yaml_exits_2_with_friendly_message() -> None:
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        Path("bad.yaml").write_text(
+            "openapi: 3.0.0\ninfo: {title: x, version: 1.0\n",
+            encoding="utf-8",
+        )
+        result = runner.invoke(get_command(app), ["bad.yaml", "--output", "out.md"])
+        assert result.exit_code == 2, result.output
+        assert "Failed to parse OpenAPI spec as JSON or YAML:" in result.output

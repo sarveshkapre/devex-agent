@@ -78,7 +78,11 @@ def load_spec(source: str, timeout_s: float = 10.0) -> dict[str, Any]:
     try:
         data = json.loads(raw)
     except json.JSONDecodeError:
-        data = yaml.safe_load(raw)
+        try:
+            data = yaml.safe_load(raw)
+        except yaml.YAMLError as exc:
+            # Keep CLI output stable and avoid leaking a full traceback for common parse errors.
+            raise ValueError(f"Failed to parse OpenAPI spec as JSON or YAML: {exc}") from exc
     if not isinstance(data, dict):
         raise ValueError("OpenAPI spec must be a JSON/YAML object at the top level.")
     return cast(dict[str, Any], data)
@@ -86,11 +90,34 @@ def load_spec(source: str, timeout_s: float = 10.0) -> dict[str, Any]:
 
 def _load_raw(source: str, timeout_s: float) -> str:
     if source.startswith("http://") or source.startswith("https://"):
-        resp = httpx.get(source, timeout=timeout_s, follow_redirects=True)
-        resp.raise_for_status()
-        return resp.text
+        try:
+            resp = httpx.get(source, timeout=timeout_s, follow_redirects=True)
+            resp.raise_for_status()
+            return resp.text
+        except httpx.HTTPError as exc:
+            raise ValueError(f"Failed to fetch OpenAPI spec from URL: {source}: {exc}") from exc
     with open(source, encoding="utf-8") as handle:
         return handle.read()
+
+
+def list_servers(spec: dict[str, Any]) -> list[tuple[str, str | None]]:
+    """
+    Return a list of (expanded_url, description) for top-level OpenAPI `servers`.
+    """
+    servers = spec.get("servers") or []
+    if not isinstance(servers, list):
+        return []
+
+    out: list[tuple[str, str | None]] = []
+    for entry in servers:
+        if not isinstance(entry, dict):
+            continue
+        url = _expand_server_url(entry)
+        if not url:
+            continue
+        desc = entry.get("description")
+        out.append((url, desc if isinstance(desc, str) and desc.strip() else None))
+    return out
 
 
 def generate_markdown(

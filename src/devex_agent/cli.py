@@ -5,7 +5,13 @@ from pathlib import Path
 
 import typer
 
-from devex_agent.generator import RenderOptions, generate_html, generate_markdown, load_spec
+from devex_agent.generator import (
+    RenderOptions,
+    generate_html,
+    generate_markdown,
+    list_servers,
+    load_spec,
+)
 
 app = typer.Typer(add_completion=False, help="DevEx Agent: generate API docs from OpenAPI specs.")
 
@@ -37,6 +43,11 @@ def generate(
         None,
         "--base-url",
         help="Override Base URL (affects Base URL and curl examples).",
+    ),
+    list_servers_only: bool = typer.Option(
+        False,
+        "--list-servers",
+        help="Print available OpenAPI `servers` (expanded URLs) and exit.",
     ),
     watch: bool = typer.Option(False, "--watch", help="Watch local spec file for changes."),
     interval: float = typer.Option(1.0, "--interval", help="Watch poll interval in seconds."),
@@ -86,7 +97,29 @@ def generate(
         raise typer.Exit(code=2)
 
     def render_once() -> None:
-        spec_data = load_spec(spec_source)
+        try:
+            spec_data = load_spec(spec_source)
+        except FileNotFoundError:
+            typer.echo(f"File not found: {spec_source}")
+            raise typer.Exit(code=1) from None
+        except OSError as exc:
+            typer.echo(f"Failed to read file: {spec_source}: {exc}")
+            raise typer.Exit(code=1) from exc
+        except ValueError as exc:
+            typer.echo(str(exc))
+            raise typer.Exit(code=2) from exc
+
+        if list_servers_only:
+            servers = list_servers(spec_data)
+            if not servers:
+                typer.echo("No OpenAPI servers found (spec has no top-level `servers`).")
+                raise typer.Exit(code=0)
+            typer.echo("Servers:")
+            for i, (url, desc) in enumerate(servers, start=1):
+                suffix = f" - {desc}" if desc else ""
+                typer.echo(f"{i}. {url}{suffix}")
+            raise typer.Exit(code=0)
+
         try:
             if fmt in {"html"}:
                 rendered = generate_html(
