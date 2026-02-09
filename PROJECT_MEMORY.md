@@ -88,3 +88,37 @@
 - Trust Label: Verified (tests + smoke)
 - Follow-ups:
   - Consider `--format auto` or output-extension inference (`.md` vs `.html`) to reduce CLI friction.
+
+## Entry 2026-02-09 - CLI friction reduction and accurate Base URL controls
+- Decision:
+  - Infer output format from `--output` extension when `--format` is omitted.
+  - Accept `devex-agent generate <spec>` as a compatibility alias while keeping single-command mode (`devex-agent <spec> ...`).
+  - Add Base URL controls (`--server`, `--base-url`) and expand OpenAPI server URL variables using defaults.
+  - Align `devex_agent.__version__` with the packaged version.
+- Why:
+  - Reduce CLI friction and make HTML export feel "obvious".
+  - Improve correctness of `curl` examples when OpenAPI specs define multiple servers or templated server URLs.
+- Evidence:
+  - Commits: `e759ed6`, `6e51670`, `ef52e29`
+  - Files:
+    - `src/devex_agent/cli.py`
+    - `src/devex_agent/generator.py`
+    - `src/devex_agent/__init__.py`
+    - `tests/test_cli.py`
+    - `tests/test_generator.py`
+    - `tests/fixtures/servers.yaml`
+    - `README.md`
+    - `docs/ROADMAP.md`
+  - Local verification:
+    - `make check` (pass; 18 tests)
+    - `.venv/bin/devex-agent tests/fixtures/petstore.yaml --output /tmp/devex-agent-smoke.html` (pass; HTML inferred)
+    - `.venv/bin/devex-agent tests/fixtures/servers.yaml --server 1 --output /tmp/devex-agent-servers.md` (pass; Base URL uses expanded variables)
+- Confidence: High
+- Trust Label: Verified (tests + smoke)
+- Follow-ups:
+  - Consider adding `--list-servers` (or richer error output) for specs with multiple servers.
+
+## Mistakes And Fixes
+- 2026-02-09 - Mistake: assumed Typer required explicit subcommands and briefly implemented an unnecessary console-script wrapper.
+  - Fix: validated actual CLI shape with `CliRunner` and implemented a compatibility alias (`generate` prefix) without changing the entrypoint.
+  - Prevention rule: add/keep a focused CLI invocation test before changing CLI dispatch/entrypoint behavior.
