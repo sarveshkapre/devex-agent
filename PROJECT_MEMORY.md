@@ -113,6 +113,8 @@
     - `make check` (pass; 18 tests)
     - `.venv/bin/devex-agent tests/fixtures/petstore.yaml --output /tmp/devex-agent-smoke.html` (pass; HTML inferred)
     - `.venv/bin/devex-agent tests/fixtures/servers.yaml --server 1 --output /tmp/devex-agent-servers.md` (pass; Base URL uses expanded variables)
+  - CI verification:
+    - Run `21822490037` (success)
 - Confidence: High
 - Trust Label: Verified (tests + smoke)
 - Follow-ups:
