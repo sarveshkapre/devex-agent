@@ -5,6 +5,8 @@
 - Resolve referenced `requestBody` objects during rendering so generated request examples and `curl` payloads include schema-based bodies.
 - Harden operation collection to ignore malformed path items instead of raising runtime errors.
 - Add regression fixtures/tests for `requestBody` `$ref` handling and malformed path entries.
+- Improve example generation for `oneOf`/`anyOf` with discriminator-aware variant selection and null-variant avoidance.
+- Add HTML export via `--format html` with minimal theme and static endpoint filter/search.
 
 ## v0.1.6
 - Improve watch mode UX (initial render, clearer status, graceful Ctrl+C).
