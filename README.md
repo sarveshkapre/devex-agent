@@ -21,18 +21,18 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -e .
 
-devex-agent generate ./openapi.yaml --output ./API.md
+devex-agent ./openapi.yaml --output ./API.md
 ```
 
 ## Watch mode
 ```bash
-devex-agent generate ./openapi.yaml --output ./API.md --watch
+devex-agent ./openapi.yaml --output ./API.md --watch
 ```
 
 ## Docker
 ```bash
 docker build -t devex-agent .
-docker run --rm -v "$PWD:/work" devex-agent generate /work/openapi.yaml --output /work/API.md
+docker run --rm -v "$PWD:/work" devex-agent /work/openapi.yaml --output /work/API.md
 ```
 
 ## Output example

@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## Unreleased
+- Fix CI quality gate failure by making `make check` work both with and without a local `.venv`.
+- Resolve referenced `requestBody` objects during rendering so generated request examples and `curl` payloads include schema-based bodies.
+- Harden operation collection to ignore malformed path items instead of raising runtime errors.
+- Add regression fixtures/tests for `requestBody` `$ref` handling and malformed path entries.
+
 ## v0.1.6
 - Improve watch mode UX (initial render, clearer status, graceful Ctrl+C).
 

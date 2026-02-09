@@ -15,7 +15,7 @@ Ship a CLI that turns OpenAPI specs into human-friendly API docs with request/re
 - `schemas.py`: (future) richer JSON Schema handling
 
 ## MVP checklist
-- [x] CLI: `devex-agent generate <spec> --output <file>`
+- [x] CLI: `devex-agent <spec> --output <file>`
 - [x] Supports JSON or YAML OpenAPI 3.x specs
 - [x] Endpoint sections with parameters table
 - [x] Request/response examples generated from schema
