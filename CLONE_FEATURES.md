@@ -7,13 +7,16 @@
 - Gaps found during codebase exploration
 
 ## Candidate Features To Do
-- [ ] P2 - Auto-detect output format from `--output` extension (e.g. `.md` vs `.html`) to reduce CLI friction. (Impact 3/5, Effort 1/5, Strategic fit 4/5, Differentiation 2/5, Risk 1/5, Confidence 4/5)
+- [ ] P1 (Selected, Cycle 2) - Support `devex-agent <spec> ...` without requiring the `generate` subcommand; keep `devex-agent generate <spec> ...` working for compatibility. (Impact 5/5, Effort 2/5, Strategic fit 5/5, Differentiation 2/5, Risk 2/5, Confidence 4/5)
+- [ ] P1 (Selected, Cycle 2) - Auto-detect output format from `--output` extension (e.g. `.md` vs `.html`) when `--format` is not provided. (Impact 4/5, Effort 1/5, Strategic fit 4/5, Differentiation 2/5, Risk 1/5, Confidence 4/5)
+- [ ] P1 (Selected, Cycle 2) - Add `--server` / `--base-url` selection to choose among OpenAPI `servers` (improves `curl` accuracy). (Impact 4/5, Effort 2/5, Strategic fit 4/5, Differentiation 2/5, Risk 2/5, Confidence 3/5)
+- [ ] P2 (Selected, Cycle 2) - Expand OpenAPI server URL variables (e.g. `https://{region}.api.example.com`) using server-variable defaults to generate stable base URLs. (Impact 3/5, Effort 2/5, Strategic fit 4/5, Differentiation 2/5, Risk 2/5, Confidence 3/5)
+- [ ] P2 (Selected, Cycle 2) - Align `devex_agent.__version__` with the packaged version (avoid stale hard-coded values). (Impact 3/5, Effort 1/5, Strategic fit 3/5, Differentiation 1/5, Risk 1/5, Confidence 5/5)
+- [ ] P2 (Selected, Cycle 2) - Update `docs/ROADMAP.md` to reflect already-shipped features and current near-term priorities. (Impact 3/5, Effort 1/5, Strategic fit 4/5, Differentiation 1/5, Risk 1/5, Confidence 4/5)
 - [ ] P2 - Add multi-file spec merging support for split OpenAPI specs (roadmap later item). (Impact 4/5, Effort 4/5, Strategic fit 4/5, Differentiation 3/5, Risk 4/5, Confidence 2/5)
 - [ ] P2 - Add spec diff mode to generate change-focused docs between two versions. (Impact 3/5, Effort 4/5, Strategic fit 3/5, Differentiation 3/5, Risk 3/5, Confidence 2/5)
-- [ ] P2 - Add `--server` / `--base-url` selection to choose among OpenAPI `servers` (improves `curl` accuracy). (Impact 4/5, Effort 2/5, Strategic fit 4/5, Differentiation 2/5, Risk 2/5, Confidence 3/5)
 - [ ] P3 - Add `--output-dir` mode to emit one file per tag (better UX for large specs). (Impact 3/5, Effort 4/5, Strategic fit 3/5, Differentiation 3/5, Risk 3/5, Confidence 2/5)
 - [ ] P3 - Add a `--strict` mode to fail generation if `$ref` cannot be resolved or content types are unsupported. (Impact 2/5, Effort 3/5, Strategic fit 3/5, Differentiation 2/5, Risk 2/5, Confidence 3/5)
-- [ ] P3 - Add optional non-`curl` code samples (HTTPie) for parity with common doc generators. (Impact 2/5, Effort 3/5, Strategic fit 3/5, Differentiation 2/5, Risk 2/5, Confidence 3/5)
 
 ## Implemented
 - [x] 2026-02-09 - Versioned the autonomous operating contract and session task list in-repo.
