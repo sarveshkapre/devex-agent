@@ -9,13 +9,18 @@
 ## Candidate Features To Do
 - [ ] P2 - Spec diff mode to generate change-focused docs between two versions. (Impact 4/5, Effort 4/5, Strategic fit 4/5, Differentiation 3/5, Risk 3/5, Confidence 2/5)
 - [ ] P2 - `--output-dir` mode to emit one file per tag (better UX for large specs). (Impact 4/5, Effort 4/5, Strategic fit 4/5, Differentiation 3/5, Risk 3/5, Confidence 2/5)
-- [ ] P2 - Minimal `--serve` mode for generated HTML (local static server + optional `--watch` rebuild). (Impact 3/5, Effort 3/5, Strategic fit 3/5, Differentiation 2/5, Risk 2/5, Confidence 2/5)
 - [ ] P3 - Performance: incremental/cached rendering for `--watch` on large specs (avoid full rebuild when only a small section changes). (Impact 3/5, Effort 4/5, Strategic fit 3/5, Differentiation 2/5, Risk 3/5, Confidence 2/5)
 - [ ] P3 - Bundling: optionally support external `http(s)://...` `$ref` (opt-in, safe defaults) for URL-loaded specs. (Impact 3/5, Effort 4/5, Strategic fit 3/5, Differentiation 2/5, Risk 4/5, Confidence 1/5)
 - [ ] P3 - HTML export: lightweight theming controls (brand color, logo, font) without requiring custom template forks. (Impact 3/5, Effort 3/5, Strategic fit 3/5, Differentiation 2/5, Risk 2/5, Confidence 2/5)
 - [ ] P3 - Hosted docs preview. (Impact 4/5, Effort 5/5, Strategic fit 3/5, Differentiation 3/5, Risk 4/5, Confidence 1/5)
 
 ## Implemented
+- [x] 2026-02-10 - `--serve` mode for generated HTML: start a local static server for the output file (supports `--host`, `--port`, and optional `--watch` rebuild).
+  - Evidence: `src/devex_agent/cli.py`, `tests/test_cli.py`, commit `9a66b33`, local `make check`, local `.venv/bin/devex-agent tests/fixtures/petstore.yaml --output /tmp/devex-serve-smoke/API.html --serve --host 127.0.0.1 --port <free_port>` + `curl http://127.0.0.1:<free_port>/API.html` (contains `<!doctype html>`).
+- [x] 2026-02-10 - Schema example fidelity: support `default`, JSON Schema `const`, and `additionalProperties` (map/dict schemas) during example generation.
+  - Evidence: `src/devex_agent/generator.py`, commit `76beb21`, local `make check`.
+- [x] 2026-02-10 - Add fixtures/tests for `default`/`const`/`additionalProperties` schema example generation (protect against regressions across real-world specs).
+  - Evidence: `tests/test_generator.py`, `tests/fixtures/schema_defaults.yaml`, commit `76beb21`, local `.venv/bin/devex-agent tests/fixtures/schema_defaults.yaml --output /tmp/devex-schema-defaults-smoke.md`.
 - [x] 2026-02-09 - Multi-file specs (local): add `--bundle` to inline external file `$ref` so split OpenAPI specs render cleanly (and can be paired with `--strict`).
   - Evidence: `src/devex_agent/cli.py`, `src/devex_agent/generator.py`, `tests/test_cli.py`, `tests/fixtures/multi_file_root.yaml`, `tests/fixtures/multi_file_schemas.yaml`, commit `48d599b`, local `make check`, local `.venv/bin/devex-agent tests/fixtures/multi_file_root.yaml --bundle --strict --output /tmp/devex-bundle-smoke.md`.
 - [x] 2026-02-09 - `$ref` siblings overlay for docs rendering: preserve doc-friendly overrides like `example` during internal ref resolution.
@@ -76,6 +81,7 @@
 - Market scan (bounded, 2026-02-09): modern OpenAPI UI components emphasize instant search, multiple themes, and an embedded API client beyond basic "try it out". https://scalar.com/guides/migration/swagger-ui
 - Market scan (bounded, 2026-02-09): interactive docs commonly include an API console and easy theming/branding without custom template forks. https://rapidocweb.com/index.html
 - Market scan (bounded, 2026-02-09): bundling in the ecosystem often relies on `$ref` parser libraries with CLI wrappers (e.g. swagger-cli) used across tooling stacks. https://blog.stoplight.io/keeping-openapi-dry-and-portable
+- Market scan (bounded, 2026-02-10): local docs preview servers with `--host`/`--port` options are baseline parity in adjacent CLIs; DevEx Agent should support a minimal local preview loop that serves the generated HTML artifact. https://redocly.com/docs/cli/v1/commands/preview-docs
 - Gap map (2026-02-09):
   - Missing (strategic): diff mode, interactive “try it” console (untrusted: based on external market scan).
   - Weak: very-large-spec UX/perf (pagination/incremental render), richer theming controls for HTML.

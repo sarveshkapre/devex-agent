@@ -1,5 +1,68 @@
 # Project Memory
 
+## Entry 2026-02-10 - Local HTML preview server (`--serve`)
+- Decision: Add `--serve` mode to start a local static server for generated HTML output (with `--host`/`--port`, and compatible with `--watch` rebuilds).
+- Why: Static HTML is much more useful when it can be previewed locally without extra tooling; parity with adjacent OpenAPI doc CLIs typically includes a local preview loop.
+- Evidence:
+  - Commit: `9a66b33`
+  - Files:
+    - `src/devex_agent/cli.py`
+    - `tests/test_cli.py`
+  - Local verification:
+    - `make check` (pass)
+    - Smoke (pass):
+      ```bash
+      workdir="$(mktemp -d /tmp/devex-serve-smoke2.XXXXXX)"
+      port="$(
+        python3 - <<'PY'
+      import socket
+      s = socket.socket()
+      s.bind(("127.0.0.1", 0))
+      print(s.getsockname()[1])
+      s.close()
+      PY
+      )"
+
+      PYTHONUNBUFFERED=1 .venv/bin/devex-agent tests/fixtures/petstore.yaml \
+        --output "$workdir/API.html" \
+        --serve --host 127.0.0.1 --port "$port" \
+        >"$workdir/serve.log" 2>&1 &
+      pid=$!
+
+      curl -fsS --max-time 2 "http://127.0.0.1:$port/API.html" | rg "<!doctype html>"
+
+      kill -TERM "$pid"
+      ```
+  - CI verification:
+    - Run `21855127232` (success)
+- Confidence: High
+- Trust Label: Verified (tests + smoke + CI)
+- Follow-ups:
+  - Consider adding graceful SIGTERM shutdown for `--serve` if this becomes a common workflow in scripts.
+
+## Entry 2026-02-10 - Schema example fidelity: `default`, `const`, `additionalProperties`
+- Decision: Improve schema example generation to prefer JSON Schema `const`, then `default`, and to emit representative map examples for object schemas with `additionalProperties` (plus include a small number of optional fields with strong example/default signals).
+- Why: Real-world OpenAPI specs frequently rely on `default`/`const` and map-like schemas; examples that ignore these signals are less useful and can look incorrect.
+- Evidence:
+  - Commit: `76beb21`
+  - Files:
+    - `src/devex_agent/generator.py`
+    - `tests/test_generator.py`
+    - `tests/fixtures/schema_defaults.yaml`
+  - Local verification:
+    - `make check` (pass)
+    - Smoke (pass):
+      - `.venv/bin/devex-agent tests/fixtures/schema_defaults.yaml --output /tmp/devex-schema-defaults-smoke.md`
+      - `rg -n '"status": "ok"' /tmp/devex-schema-defaults-smoke.md`
+      - `rg -n '"count": 7' /tmp/devex-schema-defaults-smoke.md`
+      - `rg -n '"key": 0' /tmp/devex-schema-defaults-smoke.md`
+  - CI verification:
+    - Run `21855123791` (success)
+- Confidence: High
+- Trust Label: Verified (tests + smoke + CI)
+- Follow-ups:
+  - Extend example heuristics further as new fixtures come in (formats, min/max bounds, nested maps).
+
 ## Entry 2026-02-09 - CI execution environment mismatch
 - Decision: Make `Makefile` commands run against `.venv` when present, otherwise fall back to tools available on `PATH`.
 - Why: GitHub Actions installs dependencies globally for jobs, so hard-coded activation of `.venv/bin/activate` caused `make check` to fail immediately.

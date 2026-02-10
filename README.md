@@ -52,6 +52,11 @@ devex-agent ./openapi.yaml --output ./API.html
 The HTML export includes endpoint navigation, filtering, and shareable deep links (filter state is kept
 in the URL hash).
 
+Preview locally:
+```bash
+devex-agent ./openapi.yaml --output ./API.html --serve
+```
+
 ## Strict mode
 By default, DevEx Agent is best-effort. Use `--strict` to fail fast when a spec contains
 unresolved `$ref` or request/response bodies that DevEx Agent can't render.
