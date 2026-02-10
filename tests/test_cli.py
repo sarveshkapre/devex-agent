@@ -130,3 +130,23 @@ def test_bundle_allows_external_ref_and_strict_passes() -> None:
         assert "\"pets\"" in out
         assert "\"kind\": \"dog\"" in out
         assert "\"id\": \"string\"" in out
+
+
+def test_serve_requires_output() -> None:
+    spec_path = (Path(__file__).parent / "fixtures" / "petstore.yaml").resolve()
+    runner = CliRunner()
+    result = runner.invoke(get_command(app), [str(spec_path), "--serve"])
+    assert result.exit_code == 2, result.output
+    assert "--serve requires --output" in result.output
+
+
+def test_serve_requires_html_output() -> None:
+    spec_path = (Path(__file__).parent / "fixtures" / "petstore.yaml").resolve()
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        result = runner.invoke(
+            get_command(app),
+            [str(spec_path), "--format", "html", "--output", "out.md", "--serve"],
+        )
+        assert result.exit_code == 2, result.output
+        assert "--serve requires an .html output file" in result.output
