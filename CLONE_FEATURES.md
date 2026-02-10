@@ -20,6 +20,8 @@
   - Evidence: `src/devex_agent/cli.py`, `src/devex_agent/generator.py`, `tests/test_cli.py`, `tests/fixtures/multi_file_root.yaml`, `tests/fixtures/multi_file_schemas.yaml`, commit `48d599b`, local `make check`, local `.venv/bin/devex-agent tests/fixtures/multi_file_root.yaml --bundle --strict --output /tmp/devex-bundle-smoke.md`.
 - [x] 2026-02-09 - `$ref` siblings overlay for docs rendering: preserve doc-friendly overrides like `example` during internal ref resolution.
   - Evidence: `src/devex_agent/generator.py`, `tests/test_generator.py`, `tests/fixtures/ref_siblings.yaml`, commit `48d599b`, local `make check`.
+- [x] 2026-02-09 - Docs alignment: document `--bundle` and refresh roadmap/plan/project tracker to reflect current shipped behavior and next steps.
+  - Evidence: `README.md`, `docs/ROADMAP.md`, `docs/PROJECT.md`, `PLAN.md`, `docs/CHANGELOG.md`, `PROJECT_MEMORY.md`, `CLONE_FEATURES.md`, commit `a4a5c16`, local `make check`, CI run `21845795567` (success).
 - [x] 2026-02-09 - Add `--strict` mode: fail generation on unresolved `$ref` and unsupported request/response body content types (supported: JSON and `*+json`).
   - Evidence: `src/devex_agent/cli.py`, `src/devex_agent/generator.py`, `tests/test_cli.py`, `tests/test_generator.py`, `tests/fixtures/unresolved_ref.yaml`, `tests/fixtures/unsupported_content_type.yaml`, commit `87af3f0`, local `make check`, local `.venv/bin/devex-agent tests/fixtures/petstore.yaml --strict --output /tmp/devex-strict-ok.md`.
 - [x] 2026-02-09 - HTML UX polish: active nav highlight, shareable deep links (filter preserved in URL hash), and copy-link buttons for tags/endpoints.
