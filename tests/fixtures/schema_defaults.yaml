@@ -1,0 +1,36 @@
+openapi: 3.0.0
+info:
+  title: Schema Defaults Example
+  version: 1.0.0
+paths:
+  /thing:
+    get:
+      summary: Get a thing
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Thing"
+components:
+  schemas:
+    Thing:
+      type: object
+      required: [status, labels]
+      properties:
+        status:
+          type: string
+          const: ok
+        labels:
+          type: object
+          additionalProperties:
+            type: integer
+        count:
+          type: integer
+          default: 7
+        meta:
+          type: object
+          default:
+            source: generated
+            stable: true

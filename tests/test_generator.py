@@ -204,3 +204,20 @@ def test_ref_siblings_overlay_example_for_docs_rendering() -> None:
     assert "`GET /thing`" in markdown
     # The `example` sibling should override the referenced schema's generated example.
     assert "\"id\": \"override\"" in markdown
+
+
+def test_schema_examples_use_const_default_and_additional_properties() -> None:
+    spec_path = Path(__file__).parent / "fixtures" / "schema_defaults.yaml"
+    spec = load_spec(str(spec_path))
+    markdown = generate_markdown(spec, RenderOptions(include_curl=False))
+
+    assert "`GET /thing`" in markdown
+    assert "\"status\": \"ok\"" in markdown
+    assert "\"count\": 7" in markdown
+    # additionalProperties map schema should render a representative key/value entry.
+    assert "\"labels\": {" in markdown
+    assert "\"key\": 0" in markdown
+    # object default should be used as-is.
+    assert "\"meta\": {" in markdown
+    assert "\"source\": \"generated\"" in markdown
+    assert "\"stable\": true" in markdown

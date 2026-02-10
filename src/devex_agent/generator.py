@@ -1095,6 +1095,14 @@ def example_from_schema(schema: dict[str, Any], spec: dict[str, Any], depth: int
     if "example" in schema:
         return schema["example"]
 
+    # JSON Schema `const` (commonly used in modern OpenAPI 3.1 schemas) is the most specific signal.
+    if "const" in schema:
+        return schema["const"]
+
+    # `default` is a strong hint for doc-friendly examples (even when no explicit `example` exists).
+    if "default" in schema:
+        return schema["default"]
+
     if "enum" in schema and schema["enum"]:
         return schema["enum"][0]
 
@@ -1120,13 +1128,54 @@ def example_from_schema(schema: dict[str, Any], spec: dict[str, Any], depth: int
         properties = schema.get("properties", {})
         required = schema.get("required", [])
         obj: dict[str, Any] = {}
-        for name, subschema in properties.items():
-            if required and name not in required:
-                continue
-            obj[name] = example_from_schema(subschema, spec, depth + 1)
-        if not required:
-            for name, subschema in list(properties.items())[:3]:
+        if isinstance(properties, dict):
+            required_set = {x for x in required if isinstance(x, str)}
+            for name, subschema in properties.items():
+                if required_set and name not in required_set:
+                    continue
+                if not isinstance(subschema, dict):
+                    continue
                 obj[name] = example_from_schema(subschema, spec, depth + 1)
+
+            def _has_strong_example_signal(s: Any) -> bool:
+                return (
+                    isinstance(s, dict)
+                    and (
+                        "example" in s
+                        or "default" in s
+                        or "const" in s
+                        or ("enum" in s and isinstance(s.get("enum"), list) and bool(s.get("enum")))
+                    )
+                )
+
+            # If the schema has `required`, include a small number of optional fields when they
+            # carry explicit example/default signals (keeps examples useful without exploding size).
+            if required_set:
+                extras: list[str] = []
+                for name, subschema in properties.items():
+                    if name in required_set:
+                        continue
+                    if _has_strong_example_signal(subschema):
+                        extras.append(name)
+                    if len(extras) >= 2:
+                        break
+                for name in extras:
+                    subschema = properties.get(name)
+                    if isinstance(subschema, dict):
+                        obj[name] = example_from_schema(subschema, spec, depth + 1)
+
+            if not required_set:
+                for name, subschema in list(properties.items())[:3]:
+                    if isinstance(subschema, dict):
+                        obj[name] = example_from_schema(subschema, spec, depth + 1)
+
+        if not obj:
+            additional = schema.get("additionalProperties")
+            if additional is True:
+                return {"key": "string"}
+            if isinstance(additional, dict):
+                val = example_from_schema(additional, spec, depth + 1)
+                return {"key": val} if val is not None else {"key": "string"}
         return obj
 
     if schema_type == "array":
