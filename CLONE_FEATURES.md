@@ -7,14 +7,30 @@
 - Gaps found during codebase exploration
 
 ## Candidate Features To Do
-- [ ] P2 - Spec diff mode to generate change-focused docs between two versions. (Impact 4/5, Effort 4/5, Strategic fit 4/5, Differentiation 3/5, Risk 3/5, Confidence 2/5)
-- [ ] P2 - `--output-dir` mode to emit one file per tag (better UX for large specs). (Impact 4/5, Effort 4/5, Strategic fit 4/5, Differentiation 3/5, Risk 3/5, Confidence 2/5)
-- [ ] P3 - Performance: incremental/cached rendering for `--watch` on large specs (avoid full rebuild when only a small section changes). (Impact 3/5, Effort 4/5, Strategic fit 3/5, Differentiation 2/5, Risk 3/5, Confidence 2/5)
-- [ ] P3 - Bundling: optionally support external `http(s)://...` `$ref` (opt-in, safe defaults) for URL-loaded specs. (Impact 3/5, Effort 4/5, Strategic fit 3/5, Differentiation 2/5, Risk 4/5, Confidence 1/5)
-- [ ] P3 - HTML export: lightweight theming controls (brand color, logo, font) without requiring custom template forks. (Impact 3/5, Effort 3/5, Strategic fit 3/5, Differentiation 2/5, Risk 2/5, Confidence 2/5)
-- [ ] P3 - Hosted docs preview. (Impact 4/5, Effort 5/5, Strategic fit 3/5, Differentiation 3/5, Risk 4/5, Confidence 1/5)
+- [ ] P1 - Spec diff mode to generate change-focused docs between two OpenAPI versions (new/changed/removed endpoints + schema deltas). (Impact 5/5, Effort 4/5, Strategic fit 5/5, Differentiation 4/5, Risk 3/5, Confidence 3/5)
+- [ ] P1 - Add `devex-agent lint` (or `--lint`) with baseline checks: unresolved refs, duplicate operation IDs, duplicate params, and unused components. (Impact 5/5, Effort 4/5, Strategic fit 5/5, Differentiation 3/5, Risk 3/5, Confidence 3/5)
+- [ ] P1 - `--output-dir` mode to emit one docs file per tag plus an index page for large API surfaces. (Impact 4/5, Effort 4/5, Strategic fit 4/5, Differentiation 3/5, Risk 3/5, Confidence 3/5)
+- [ ] P1 - HTML export theming flags (`--theme-color`, `--logo-url`, `--font-family`) without template forks. (Impact 4/5, Effort 3/5, Strategic fit 4/5, Differentiation 3/5, Risk 2/5, Confidence 3/5)
+- [ ] P1 - Large-spec performance harness with reproducible benchmark fixture and target budget (render time/memory). (Impact 4/5, Effort 3/5, Strategic fit 4/5, Differentiation 2/5, Risk 2/5, Confidence 4/5)
+- [ ] P2 - Incremental/cached rendering for `--watch` to avoid full re-render when unrelated sections change. (Impact 4/5, Effort 4/5, Strategic fit 4/5, Differentiation 2/5, Risk 3/5, Confidence 2/5)
+- [ ] P2 - Opt-in external `http(s)` `$ref` bundling with explicit allowlist and timeout guards. (Impact 3/5, Effort 4/5, Strategic fit 3/5, Differentiation 2/5, Risk 4/5, Confidence 2/5)
+- [ ] P2 - Improve schema example fidelity for bounds/constraints (`minimum`, `maximum`, `minLength`, `pattern`, `minItems`). (Impact 4/5, Effort 3/5, Strategic fit 4/5, Differentiation 3/5, Risk 2/5, Confidence 3/5)
+- [ ] P2 - Improve `curl` examples for `multipart/form-data` and `application/x-www-form-urlencoded` requests. (Impact 4/5, Effort 3/5, Strategic fit 4/5, Differentiation 2/5, Risk 3/5, Confidence 3/5)
+- [ ] P2 - Add dedicated tests for security combinations (multiple auth schemes, OR/AND requirements) in docs + curl output. (Impact 3/5, Effort 2/5, Strategic fit 4/5, Differentiation 2/5, Risk 2/5, Confidence 4/5)
+- [ ] P2 - HTML accessibility hardening (skip links, keyboard nav, better contrast checks in CI). (Impact 3/5, Effort 3/5, Strategic fit 3/5, Differentiation 2/5, Risk 2/5, Confidence 3/5)
+- [ ] P2 - Add release automation checks to enforce changelog entry and clean quality gate before tag creation. (Impact 3/5, Effort 2/5, Strategic fit 4/5, Differentiation 1/5, Risk 2/5, Confidence 4/5)
+- [ ] P3 - Hosted docs preview mode for shareable review links (artifact upload or static host publish helper). (Impact 4/5, Effort 5/5, Strategic fit 3/5, Differentiation 3/5, Risk 4/5, Confidence 1/5)
+- [ ] P3 - Optional interactive API console embed path for generated HTML (bring-your-own endpoint + auth placeholders). (Impact 3/5, Effort 5/5, Strategic fit 2/5, Differentiation 3/5, Risk 4/5, Confidence 1/5)
+- [ ] P3 - Plugin/hooks system for custom endpoint render blocks without forking generator core. (Impact 3/5, Effort 5/5, Strategic fit 3/5, Differentiation 4/5, Risk 4/5, Confidence 1/5)
+- [ ] P3 - Stdin input support (`devex-agent -`) for easier pipeline integration in CI/CD streams. (Impact 2/5, Effort 2/5, Strategic fit 3/5, Differentiation 1/5, Risk 2/5, Confidence 4/5)
 
 ## Implemented
+- [x] 2026-02-11 - Enforce OpenAPI parameter override semantics: operation-level parameters now override path-level parameters by `(name, in)`, preventing duplicate parameter rows and stale `curl` query values.
+  - Evidence: `src/devex_agent/generator.py`, `tests/test_generator.py`, `tests/fixtures/param_override.yaml`, commit `fac4526`, local `make check`, local `.venv/bin/devex-agent tests/fixtures/param_override.yaml --output /tmp/devex-cycle1-smoke.G1xu5q/param.md`.
+- [x] 2026-02-11 - Fix internal `$ref` resolution and strict validation for escaped JSON Pointer segments (`~1`, `~0`) so component names containing `/` or `~` resolve correctly.
+  - Evidence: `src/devex_agent/generator.py`, `tests/test_generator.py`, `tests/test_cli.py`, `tests/fixtures/escaped_ref.yaml`, commit `fac4526`, local `make check`, local `.venv/bin/devex-agent tests/fixtures/escaped_ref.yaml --strict --output /tmp/devex-cycle1-smoke.G1xu5q/escaped.md`.
+- [x] 2026-02-11 - Add fail-fast CLI validation for `--watch --interval` to reject non-positive values with a stable user-facing error.
+  - Evidence: `src/devex_agent/cli.py`, `tests/test_cli.py`, commit `fac4526`, local `make check`.
 - [x] 2026-02-10 - `--serve` mode for generated HTML: start a local static server for the output file (supports `--host`, `--port`, and optional `--watch` rebuild).
   - Evidence: `src/devex_agent/cli.py`, `tests/test_cli.py`, commit `9a66b33`, local `make check`, local `.venv/bin/devex-agent tests/fixtures/petstore.yaml --output /tmp/devex-serve-smoke/API.html --serve --host 127.0.0.1 --port <free_port>` + `curl http://127.0.0.1:<free_port>/API.html` (contains `<!doctype html>`).
 - [x] 2026-02-10 - Schema example fidelity: support `default`, JSON Schema `const`, and `additionalProperties` (map/dict schemas) during example generation.
@@ -63,6 +79,16 @@
   - Evidence: CI run `21822490037` (success) on `main`.
 
 ## Insights
+- Session scoring (2026-02-11): top 5 high-impact candidates were spec diff mode, lint mode, per-tag output mode, HTML theming controls, and large-spec performance harness; this cycle executed the highest-confidence reliability slice first (trusted: local code/tests).
+- Quick code review sweep (2026-02-11): parameter override semantics and escaped JSON Pointer refs were correctness risks with low effort and high confidence, so they were prioritized ahead of larger feature work (trusted: local code/tests).
+- Market scan (bounded, 2026-02-11, untrusted): baseline expectations still center on static HTML generation, search/navigation, and easy local preview in doc CLIs. Source: https://redocly.com/docs/cli/commands/build-docs
+- Market scan (bounded, 2026-02-11, untrusted): interactive API docs commonly expose "Try it out"/API client flows, which remains a differentiation opportunity for DevEx Agent. Source: https://swagger.io/tools/swagger-ui/download/
+- Market scan (bounded, 2026-02-11, untrusted): modern API docs platforms emphasize built-in API clients, multi-theme UX, and flexible embeddings. Source: https://scalar.com/docs
+- Gap map refresh (2026-02-11):
+  - Missing: spec diff mode, lint mode, optional interactive console path.
+  - Weak: large-spec performance tooling, configurable HTML theming, multipart form curl examples.
+  - Parity: strict mode, local-file bundling, HTML export/filter/deep links, local preview server.
+  - Differentiator: schema/example heuristics plus resilient/friendly CLI failure behavior.
 - CI failures across runs `21557668393` through `21557307241` shared the same root cause: `make check` assumed `.venv` activation.
 - On macOS, `python` may not exist (only `python3`), so docs should default to `python3 -m venv ...` for a smoother quickstart.
 - Typer is currently exposing single-command mode (`devex-agent <spec> ...`); accept `devex-agent generate <spec> ...` as a compatibility alias.

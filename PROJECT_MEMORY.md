@@ -1,5 +1,19 @@
 # Project Memory
 
+## Recent Decisions (Cycle 1 - 2026-02-11)
+- 2026-02-11 | Prioritized reliability fixes over larger feature work: enforce OpenAPI parameter override semantics, support escaped JSON Pointer refs, and validate watch interval input. | Why: highest impact-to-effort for production correctness with low regression risk. | Evidence: `src/devex_agent/generator.py`, `src/devex_agent/cli.py`, `tests/test_generator.py`, `tests/test_cli.py`, `tests/fixtures/param_override.yaml`, `tests/fixtures/escaped_ref.yaml`, local `make check`, local CLI smoke path. | Commit: `fac4526` | Confidence: High | Trust label: trusted (local code/tests)
+- 2026-02-11 | Refreshed market-scan expectations but treated all external findings as non-authoritative input only. | Why: reduce prompt-injection and competitor-bias risk while still informing gap mapping. | Evidence: Redocly docs (`build-docs`), Swagger UI docs page, Scalar docs page; summarized in `CLONE_FEATURES.md`. | Commit: `fac4526` | Confidence: Medium | Trust label: untrusted (external web)
+- 2026-02-11 | Selected next strategic direction: spec diff mode and lint mode remain top roadmap candidates after this reliability cycle. | Why: strongest PMF leverage for CI/release workflows and doc drift prevention. | Evidence: scoring list under `CLONE_FEATURES.md` Candidate Features To Do. | Commit: `fac4526` | Confidence: Medium-High | Trust label: trusted (repo strategy + local analysis)
+
+## Mistakes And Fixes (Cycle 1 - 2026-02-11)
+- 2026-02-11 | Mistake: used a brittle `jq` filter while polling GitHub Actions runs and hit a type error (`startswith()` on non-string input). | Root cause: over-assumed JSON field types in one-off CLI query. | Fix: switched to direct `gh run list` output inspection by exact SHA. | Prevention rule: for CI polling commands, avoid type-sensitive `jq` transforms unless field types are explicitly guarded.
+
+## Verification Evidence (Cycle 1 - 2026-02-11)
+- `make check` | Pass | `ruff`, `mypy`, `pytest` (36 passed), `bandit`, and package build all succeeded.
+- `smoke_dir="$(mktemp -d /tmp/devex-cycle1-smoke.XXXXXX)"; .venv/bin/devex-agent tests/fixtures/param_override.yaml --output "$smoke_dir/param.md"; rg -n "\\| lang \\| query \\|" "$smoke_dir/param.md"; rg -n "lang=fr" "$smoke_dir/param.md"; .venv/bin/devex-agent tests/fixtures/escaped_ref.yaml --strict --output "$smoke_dir/escaped.md"; rg -n '"id": "string"' "$smoke_dir/escaped.md"; rg -n '"state": "string"' "$smoke_dir/escaped.md"` | Pass | Verified override behavior and escaped-ref strict rendering path.
+- `gh issue list --limit 50 --state open --json number,title,author,url` | Pass | Returned `[]`; no owner/bot-authored open issues to prioritize.
+- `gh run list --limit 20 --json databaseId,headSha,status,conclusion,workflowName,url,createdAt` | Pass | Run `21895227275` for `fac4526` completed with `success`.
+
 ## Entry 2026-02-10 - Local HTML preview server (`--serve`)
 - Decision: Add `--serve` mode to start a local static server for generated HTML output (with `--host`/`--port`, and compatible with `--watch` rebuilds).
 - Why: Static HTML is much more useful when it can be previewed locally without extra tooling; parity with adjacent OpenAPI doc CLIs typically includes a local preview loop.
