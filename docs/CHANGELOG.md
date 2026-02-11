@@ -1,6 +1,9 @@
 # CHANGELOG
 
 ## Unreleased
+- Fix parameter handling so operation-level parameters correctly override path-level parameters by `(name, in)`, preventing duplicate rows and stale `curl` query values.
+- Fix internal `$ref` resolution to support escaped JSON Pointer segments (`~1` and `~0`) in both strict validation and rendered examples.
+- Add CLI validation for `--watch --interval` to fail fast on non-positive values.
 - Add `--bundle` to inline external local file `$ref` so split OpenAPI specs can be rendered (optionally paired with `--strict`).
 - Fix CI quality gate failure by making `make check` work both with and without a local `.venv`.
 - Resolve referenced `requestBody` objects during rendering so generated request examples and `curl` payloads include schema-based bodies.

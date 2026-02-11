@@ -96,6 +96,9 @@ def generate(
     if watch and (spec_source.startswith("http://") or spec_source.startswith("https://")):
         typer.echo("Watch mode only supports local files.")
         raise typer.Exit(code=2)
+    if watch and interval <= 0:
+        typer.echo("--interval must be > 0.")
+        raise typer.Exit(code=2)
 
     options = RenderOptions(
         include_examples=not no_examples,

@@ -1,0 +1,35 @@
+openapi: 3.0.3
+info:
+  title: Param Override API
+  version: 1.0.0
+paths:
+  /pets:
+    parameters:
+      - name: lang
+        in: query
+        required: false
+        description: Default language selector.
+        schema:
+          type: string
+          enum: [en]
+    get:
+      summary: List pets
+      parameters:
+        - name: lang
+          in: query
+          required: true
+          description: Override language selector.
+          schema:
+            type: string
+            enum: [fr]
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok]
+                properties:
+                  ok:
+                    type: boolean

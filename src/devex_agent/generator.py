@@ -137,16 +137,9 @@ def list_servers(spec: dict[str, Any]) -> list[tuple[str, str | None]]:
 
 
 def _resolve_ref_target(spec: dict[str, Any], ref: str) -> Any:
-    if not ref.startswith("#/"):
+    if not ref.startswith("#"):
         return None
-    parts = ref[2:].split("/")
-    current: Any = spec
-    for part in parts:
-        if isinstance(current, dict) and part in current:
-            current = current[part]
-        else:
-            return None
-    return current
+    return _resolve_pointer(spec, ref[1:])
 
 
 def _parse_json_pointer(pointer: str) -> list[str]:
@@ -1060,12 +1053,26 @@ def _collect_parameters(
     path_item: dict[str, Any], operation: dict[str, Any], spec: dict[str, Any]
 ) -> list[dict[str, Any]]:
     params: list[dict[str, Any]] = []
+    index_by_key: dict[tuple[str, str], int] = {}
+
+    def add_param(raw_param: Any) -> None:
+        if not isinstance(raw_param, dict):
+            return
+        resolved = _resolve_ref(raw_param, spec)
+        name = resolved.get("name")
+        location = resolved.get("in")
+        if isinstance(name, str) and name and isinstance(location, str) and location:
+            key = (location, name)
+            if key in index_by_key:
+                params[index_by_key[key]] = resolved
+                return
+            index_by_key[key] = len(params)
+        params.append(resolved)
+
     for param in path_item.get("parameters", []) or []:
-        resolved = _resolve_ref(param, spec)
-        params.append(resolved)
+        add_param(param)
     for param in operation.get("parameters", []) or []:
-        resolved = _resolve_ref(param, spec)
-        params.append(resolved)
+        add_param(param)
     return params
 
 
@@ -1345,13 +1352,9 @@ def _resolve_ref(node: dict[str, Any], spec: dict[str, Any]) -> dict[str, Any]:
         return node
     if not ref.startswith("#/"):
         return node
-    parts = ref[2:].split("/")
-    current: Any = spec
-    for part in parts:
-        if isinstance(current, dict) and part in current:
-            current = current[part]
-        else:
-            return node
+    current = _resolve_ref_target(spec, ref)
+    if current is None:
+        return node
     if isinstance(current, dict):
         if len(node.keys()) == 1:
             return current

@@ -132,6 +132,17 @@ def test_bundle_allows_external_ref_and_strict_passes() -> None:
         assert "\"id\": \"string\"" in out
 
 
+def test_strict_mode_accepts_escaped_json_pointer_refs() -> None:
+    spec_path = (Path(__file__).parent / "fixtures" / "escaped_ref.yaml").resolve()
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        result = runner.invoke(get_command(app), [str(spec_path), "--strict", "--output", "out.md"])
+        assert result.exit_code == 0, result.output
+        out = Path("out.md").read_text(encoding="utf-8")
+        assert "\"id\": \"string\"" in out
+        assert "\"state\": \"string\"" in out
+
+
 def test_serve_requires_output() -> None:
     spec_path = (Path(__file__).parent / "fixtures" / "petstore.yaml").resolve()
     runner = CliRunner()
@@ -150,3 +161,14 @@ def test_serve_requires_html_output() -> None:
         )
         assert result.exit_code == 2, result.output
         assert "--serve requires an .html output file" in result.output
+
+
+def test_watch_interval_must_be_positive() -> None:
+    spec_path = (Path(__file__).parent / "fixtures" / "petstore.yaml").resolve()
+    runner = CliRunner()
+    result = runner.invoke(
+        get_command(app),
+        [str(spec_path), "--watch", "--interval", "0", "--output", "out.md"],
+    )
+    assert result.exit_code == 2, result.output
+    assert "--interval must be > 0." in result.output

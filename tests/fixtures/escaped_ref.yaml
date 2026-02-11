@@ -1,0 +1,37 @@
+openapi: 3.0.3
+info:
+  title: Escaped Ref API
+  version: 1.0.0
+paths:
+  /slash:
+    get:
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/A~1B"
+  /tilde:
+    get:
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/T~0N"
+components:
+  schemas:
+    "A/B":
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
+    "T~N":
+      type: object
+      required: [state]
+      properties:
+        state:
+          type: string

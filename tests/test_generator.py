@@ -103,6 +103,18 @@ def test_request_body_refs_render_examples_and_curl_payloads() -> None:
     assert "--data-raw" in markdown
 
 
+def test_operation_level_parameters_override_path_level_parameters() -> None:
+    spec_path = Path(__file__).parent / "fixtures" / "param_override.yaml"
+    spec = load_spec(str(spec_path))
+    markdown = generate_markdown(spec, RenderOptions())
+
+    # OpenAPI operation-level params should override path-level params by (name, in).
+    assert markdown.count("| lang | query |") == 1
+    assert "Override language selector." in markdown
+    assert "Default language selector." not in markdown
+    assert "/pets?lang=fr" in markdown
+
+
 def test_ignores_malformed_path_items_instead_of_crashing() -> None:
     spec_path = Path(__file__).parent / "fixtures" / "malformed_paths.yaml"
     spec = load_spec(str(spec_path))
@@ -204,6 +216,15 @@ def test_ref_siblings_overlay_example_for_docs_rendering() -> None:
     assert "`GET /thing`" in markdown
     # The `example` sibling should override the referenced schema's generated example.
     assert "\"id\": \"override\"" in markdown
+
+
+def test_escaped_json_pointer_refs_are_resolved_for_examples_and_strict_mode() -> None:
+    spec_path = Path(__file__).parent / "fixtures" / "escaped_ref.yaml"
+    spec = load_spec(str(spec_path))
+
+    markdown = generate_markdown(spec, RenderOptions(strict=True, include_curl=False))
+    assert "\"id\": \"string\"" in markdown
+    assert "\"state\": \"string\"" in markdown
 
 
 def test_schema_examples_use_const_default_and_additional_properties() -> None:
