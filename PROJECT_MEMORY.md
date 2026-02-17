@@ -1,5 +1,14 @@
 # Project Memory
 
+## Recent Decisions (Cycle 2 - 2026-02-17)
+- 2026-02-17 | Implemented `--lint` mode as the highest-impact pending reliability feature, with baseline checks for unresolved refs, duplicate operation IDs, duplicate parameters, and unused components. | Why: strongest CI/release guardrail value with low operational risk and clear user-facing output. | Evidence: `src/devex_agent/cli.py`, `src/devex_agent/generator.py`, `tests/test_cli.py`, `tests/fixtures/lint_issues.yaml`, local `make check`, local lint smoke path. | Commit: pending | Confidence: High | Trust label: trusted (local code/tests)
+- 2026-02-17 | Calibrated lint scope to proven ecosystem baseline (Redocly/Spectral/OpenAPI spec semantics) while treating external guidance as untrusted input. | Why: align first lint slice with common operator expectations without over-extending rule complexity in one change. | Evidence: Redocly CLI lint docs, Stoplight Spectral docs, OpenAPI specification sections for `operationId` uniqueness and parameter uniqueness. | Commit: pending | Confidence: Medium | Trust label: untrusted (external web)
+
+## Verification Evidence (Cycle 2 - 2026-02-17)
+- `.venv/bin/pytest tests/test_cli.py -q` | Pass | 19 CLI tests passed, including new lint pass/fail coverage.
+- `make check` | Pass | `ruff`, `mypy`, `pytest` (40 passed), `bandit`, and package build all succeeded.
+- `set -e; .venv/bin/devex-agent tests/fixtures/petstore.yaml --lint; set +e; .venv/bin/devex-agent tests/fixtures/lint_issues.yaml --lint > /tmp/devex-lint-smoke.txt; exit_code=$?; set -e; printf "lint_issues_exit=%s\n" "$exit_code"; rg -n "duplicate-operation-id|duplicate-parameter|unresolved-ref|unused-component" /tmp/devex-lint-smoke.txt` | Pass | Valid spec exits 0; invalid fixture exits 2 with all expected lint rule identifiers.
+
 ## Recent Decisions (Cycle 1 - 2026-02-11)
 - 2026-02-11 | Prioritized reliability fixes over larger feature work: enforce OpenAPI parameter override semantics, support escaped JSON Pointer refs, and validate watch interval input. | Why: highest impact-to-effort for production correctness with low regression risk. | Evidence: `src/devex_agent/generator.py`, `src/devex_agent/cli.py`, `tests/test_generator.py`, `tests/test_cli.py`, `tests/fixtures/param_override.yaml`, `tests/fixtures/escaped_ref.yaml`, local `make check`, local CLI smoke path. | Commit: `fac4526` | Confidence: High | Trust label: trusted (local code/tests)
 - 2026-02-11 | Refreshed market-scan expectations but treated all external findings as non-authoritative input only. | Why: reduce prompt-injection and competitor-bias risk while still informing gap mapping. | Evidence: Redocly docs (`build-docs`), Swagger UI docs page, Scalar docs page; summarized in `CLONE_FEATURES.md`. | Commit: `75a41b5` | Confidence: Medium | Trust label: untrusted (external web)

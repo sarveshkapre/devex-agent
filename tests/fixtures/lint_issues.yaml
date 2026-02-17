@@ -1,0 +1,55 @@
+openapi: 3.0.3
+info:
+  title: Lint Issues
+  version: 1.0.0
+paths:
+  /pets:
+    get:
+      operationId: listPets
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PetList"
+  /animals:
+    get:
+      operationId: listPets
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MissingSchema"
+components:
+  schemas:
+    Pet:
+      type: object
+      properties:
+        id:
+          type: string
+    PetList:
+      type: array
+      items:
+        $ref: "#/components/schemas/Pet"
+    UnusedParent:
+      type: object
+      properties:
+        child:
+          $ref: "#/components/schemas/UnusedChild"
+    UnusedChild:
+      type: object
+      properties:
+        reason:
+          type: string

@@ -25,6 +25,23 @@ class RenderOptions:
     strict: bool = False
 
 
+@dataclass(frozen=True)
+class LintIssue:
+    code: str
+    message: str
+    pointer: str
+
+
+def _pointer_escape(segment: str) -> str:
+    return segment.replace("~", "~0").replace("/", "~1")
+
+
+def _pointer_from_parts(parts: list[str]) -> str:
+    if not parts:
+        return "#"
+    return "#/" + "/".join(_pointer_escape(part) for part in parts)
+
+
 def _expand_server_url(server: dict[str, Any]) -> str:
     url = str(server.get("url") or "")
     variables = server.get("variables") or {}
@@ -444,6 +461,264 @@ def _validate_content_types_strict(spec: dict[str, Any], operations: list[Any]) 
 def _validate_spec_strict(spec: dict[str, Any], operations: list[Any]) -> None:
     _validate_refs_strict(spec)
     _validate_content_types_strict(spec, operations)
+
+
+def lint_spec(spec: dict[str, Any]) -> list[LintIssue]:
+    issues: list[LintIssue] = []
+    issues.extend(_lint_refs(spec))
+    issues.extend(_lint_duplicate_operation_ids(spec))
+    issues.extend(_lint_duplicate_parameters(spec))
+    issues.extend(_lint_unused_components(spec))
+    return issues
+
+
+def _lint_refs(spec: dict[str, Any]) -> list[LintIssue]:
+    issues: list[LintIssue] = []
+
+    def walk(node: Any, path_parts: list[str]) -> None:
+        if isinstance(node, dict):
+            ref = node.get("$ref")
+            if isinstance(ref, str):
+                ref_ptr = _pointer_from_parts(path_parts + ["$ref"])
+                if not ref.startswith("#/"):
+                    issues.append(
+                        LintIssue(
+                            code="external-ref",
+                            message=f"Unsupported external $ref: {ref}",
+                            pointer=ref_ptr,
+                        )
+                    )
+                elif _resolve_ref_target(spec, ref) is None:
+                    issues.append(
+                        LintIssue(
+                            code="unresolved-ref",
+                            message=f"Unresolved $ref: {ref}",
+                            pointer=ref_ptr,
+                        )
+                    )
+            for k, v in node.items():
+                key = k if isinstance(k, str) else "<non-string-key>"
+                walk(v, path_parts + [key])
+            return
+
+        if isinstance(node, list):
+            for i, item in enumerate(node):
+                walk(item, path_parts + [str(i)])
+
+    walk(spec, [])
+    return issues
+
+
+def _lint_duplicate_operation_ids(spec: dict[str, Any]) -> list[LintIssue]:
+    ops = _collect_operations(spec)
+    by_operation_id: dict[str, list[_OperationRef]] = {}
+    for op in ops:
+        operation_id = op.operation.get("operationId")
+        if not isinstance(operation_id, str) or not operation_id.strip():
+            continue
+        key = operation_id.strip()
+        by_operation_id.setdefault(key, []).append(op)
+
+    issues: list[LintIssue] = []
+    for operation_id, matching_ops in by_operation_id.items():
+        if len(matching_ops) <= 1:
+            continue
+        for op in matching_ops:
+            pointer = _pointer_from_parts(["paths", op.path, op.method, "operationId"])
+            message = (
+                f"Duplicate operationId '{operation_id}' for "
+                f"{op.method.upper()} {op.path}"
+            )
+            issues.append(
+                LintIssue(
+                    code="duplicate-operation-id",
+                    message=message,
+                    pointer=pointer,
+                )
+            )
+    return issues
+
+
+def _lint_duplicate_parameters(spec: dict[str, Any]) -> list[LintIssue]:
+    paths = spec.get("paths") or {}
+    if not isinstance(paths, dict):
+        return []
+
+    issues: list[LintIssue] = []
+    for path, path_item_raw in paths.items():
+        if not isinstance(path, str) or not isinstance(path_item_raw, dict):
+            continue
+        issues.extend(
+            _find_duplicate_params_in_list(
+                path_item_raw.get("parameters"),
+                spec,
+                scope=f"path item {path}",
+                pointer_parts=["paths", path, "parameters"],
+            )
+        )
+        methods = [m for m in path_item_raw.keys() if isinstance(m, str)]
+        for method in _sorted_methods(methods):
+            operation = path_item_raw.get(method)
+            if not isinstance(operation, dict):
+                continue
+            issues.extend(
+                _find_duplicate_params_in_list(
+                    operation.get("parameters"),
+                    spec,
+                    scope=f"{method.upper()} {path}",
+                    pointer_parts=["paths", path, method, "parameters"],
+                )
+            )
+    return issues
+
+
+def _find_duplicate_params_in_list(
+    params_node: Any,
+    spec: dict[str, Any],
+    *,
+    scope: str,
+    pointer_parts: list[str],
+) -> list[LintIssue]:
+    if not isinstance(params_node, list):
+        return []
+
+    issues: list[LintIssue] = []
+    first_index_by_key: dict[tuple[str, str], int] = {}
+    for idx, raw in enumerate(params_node):
+        if not isinstance(raw, dict):
+            continue
+        resolved = _resolve_ref(raw, spec)
+        name = resolved.get("name")
+        location = resolved.get("in")
+        if not isinstance(name, str) or not name:
+            continue
+        if not isinstance(location, str) or not location:
+            continue
+
+        key = (location, name)
+        first_idx = first_index_by_key.get(key)
+        if first_idx is not None:
+            pointer = _pointer_from_parts(pointer_parts + [str(idx)])
+            issues.append(
+                LintIssue(
+                    code="duplicate-parameter",
+                    message=(
+                        f"Duplicate parameter '{name}' in '{location}' for {scope} "
+                        f"(first declared at index {first_idx})"
+                    ),
+                    pointer=pointer,
+                )
+            )
+            continue
+        first_index_by_key[key] = idx
+    return issues
+
+
+def _lint_unused_components(spec: dict[str, Any]) -> list[LintIssue]:
+    components = spec.get("components") or {}
+    if not isinstance(components, dict):
+        return []
+
+    declared: set[tuple[str, str]] = set()
+    for component_type, raw_group in components.items():
+        if not isinstance(component_type, str) or not isinstance(raw_group, dict):
+            continue
+        for component_name in raw_group.keys():
+            if isinstance(component_name, str) and component_name:
+                declared.add((component_type, component_name))
+    if not declared:
+        return []
+
+    used: set[tuple[str, str]] = set()
+    # Root usage should come from non-component parts of the spec.
+    spec_without_components = dict(spec)
+    spec_without_components.pop("components", None)
+    _collect_component_refs(spec_without_components, used)
+    used.update(_component_refs_from_security_requirements(spec))
+
+    to_visit = [ref for ref in used if ref in declared]
+    visited: set[tuple[str, str]] = set()
+    while to_visit:
+        component_type, component_name = to_visit.pop()
+        if (component_type, component_name) in visited:
+            continue
+        visited.add((component_type, component_name))
+
+        group = components.get(component_type)
+        if not isinstance(group, dict):
+            continue
+        node = group.get(component_name)
+        local_refs: set[tuple[str, str]] = set()
+        _collect_component_refs(node, local_refs)
+        for ref in local_refs:
+            if ref in declared and ref not in visited:
+                to_visit.append(ref)
+                used.add(ref)
+
+    unused = sorted(declared - used)
+    issues: list[LintIssue] = []
+    for component_type, component_name in unused:
+        pointer = _pointer_from_parts(["components", component_type, component_name])
+        issues.append(
+            LintIssue(
+                code="unused-component",
+                message=f"Component '{component_type}/{component_name}' is never referenced",
+                pointer=pointer,
+            )
+        )
+    return issues
+
+
+def _collect_component_refs(node: Any, out: set[tuple[str, str]]) -> None:
+    if isinstance(node, dict):
+        for key, value in node.items():
+            if key == "$ref" and isinstance(value, str):
+                component_ref = _component_ref_from_ref(value)
+                if component_ref is not None:
+                    out.add(component_ref)
+            if key == "mapping" and isinstance(value, dict):
+                for mapped_ref in value.values():
+                    if isinstance(mapped_ref, str):
+                        component_ref = _component_ref_from_ref(mapped_ref)
+                        if component_ref is not None:
+                            out.add(component_ref)
+            _collect_component_refs(value, out)
+        return
+    if isinstance(node, list):
+        for item in node:
+            _collect_component_refs(item, out)
+
+
+def _component_ref_from_ref(ref: str) -> tuple[str, str] | None:
+    if not ref.startswith("#/components/"):
+        return None
+    parts = _parse_json_pointer(ref[1:])
+    if len(parts) < 3:
+        return None
+    component_type = parts[1]
+    component_name = parts[2]
+    if not component_type or not component_name:
+        return None
+    return component_type, component_name
+
+
+def _component_refs_from_security_requirements(spec: dict[str, Any]) -> set[tuple[str, str]]:
+    used: set[tuple[str, str]] = set()
+
+    def collect_requirements(node: Any) -> None:
+        if not isinstance(node, list):
+            return
+        for item in node:
+            if not isinstance(item, dict):
+                continue
+            for key in item.keys():
+                if isinstance(key, str) and key:
+                    used.add(("securitySchemes", key))
+
+    collect_requirements(spec.get("security"))
+    for op in _collect_operations(spec):
+        collect_requirements(op.operation.get("security"))
+    return used
 
 
 def generate_markdown(

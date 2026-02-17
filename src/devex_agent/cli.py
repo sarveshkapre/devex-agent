@@ -12,6 +12,7 @@ from devex_agent.generator import (
     RenderOptions,
     generate_html,
     generate_markdown,
+    lint_spec,
     list_servers,
     load_spec,
     load_spec_bundled,
@@ -67,6 +68,14 @@ def generate(
         "--strict",
         help="Fail generation on unresolved $ref and unsupported request/response content types.",
     ),
+    lint: bool = typer.Option(
+        False,
+        "--lint",
+        help=(
+            "Run spec lint checks (unresolved refs, duplicate operationId, duplicate "
+            "parameters, unused components) and exit."
+        ),
+    ),
     bundle: bool = typer.Option(
         False,
         "--bundle",
@@ -98,6 +107,12 @@ def generate(
         raise typer.Exit(code=2)
     if watch and interval <= 0:
         typer.echo("--interval must be > 0.")
+        raise typer.Exit(code=2)
+    if lint and watch:
+        typer.echo("--lint does not support --watch.")
+        raise typer.Exit(code=2)
+    if lint and serve:
+        typer.echo("--lint does not support --serve.")
         raise typer.Exit(code=2)
 
     options = RenderOptions(
@@ -167,6 +182,16 @@ def generate(
                 suffix = f" - {desc}" if desc else ""
                 typer.echo(f"{i}. {url}{suffix}")
             raise typer.Exit(code=0)
+
+        if lint:
+            issues = lint_spec(spec_data)
+            if not issues:
+                typer.echo("Lint passed with 0 issues.")
+                raise typer.Exit(code=0)
+            typer.echo(f"Lint failed with {len(issues)} issue(s):")
+            for issue in issues:
+                typer.echo(f"- [{issue.code}] {issue.pointer}: {issue.message}")
+            raise typer.Exit(code=2)
 
         try:
             if fmt in {"html"}:

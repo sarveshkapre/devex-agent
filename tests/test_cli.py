@@ -116,6 +116,36 @@ def test_strict_mode_exits_2_on_external_ref_without_bundle() -> None:
         assert "Unsupported external $ref:" in result.output
 
 
+def test_lint_mode_passes_on_valid_spec() -> None:
+    spec_path = (Path(__file__).parent / "fixtures" / "petstore.yaml").resolve()
+    runner = CliRunner()
+    result = runner.invoke(get_command(app), [str(spec_path), "--lint"])
+    assert result.exit_code == 0, result.output
+    assert "Lint passed with 0 issues." in result.output
+
+
+def test_lint_mode_reports_baseline_issues() -> None:
+    spec_path = (Path(__file__).parent / "fixtures" / "lint_issues.yaml").resolve()
+    runner = CliRunner()
+    result = runner.invoke(get_command(app), [str(spec_path), "--lint"])
+    assert result.exit_code == 2, result.output
+    assert "Lint failed with" in result.output
+    assert "[unresolved-ref]" in result.output
+    assert "[duplicate-operation-id]" in result.output
+    assert "[duplicate-parameter]" in result.output
+    assert "[unused-component]" in result.output
+    assert "UnusedParent" in result.output
+    assert "UnusedChild" in result.output
+
+
+def test_lint_mode_supports_bundle_for_multi_file_specs() -> None:
+    spec_path = (Path(__file__).parent / "fixtures" / "multi_file_root.yaml").resolve()
+    runner = CliRunner()
+    result = runner.invoke(get_command(app), [str(spec_path), "--bundle", "--lint"])
+    assert result.exit_code == 0, result.output
+    assert "Lint passed with 0 issues." in result.output
+
+
 def test_bundle_allows_external_ref_and_strict_passes() -> None:
     spec_path = (Path(__file__).parent / "fixtures" / "multi_file_root.yaml").resolve()
     runner = CliRunner()
@@ -130,6 +160,14 @@ def test_bundle_allows_external_ref_and_strict_passes() -> None:
         assert "\"pets\"" in out
         assert "\"kind\": \"dog\"" in out
         assert "\"id\": \"string\"" in out
+
+
+def test_lint_rejects_watch_mode() -> None:
+    spec_path = (Path(__file__).parent / "fixtures" / "petstore.yaml").resolve()
+    runner = CliRunner()
+    result = runner.invoke(get_command(app), [str(spec_path), "--lint", "--watch"])
+    assert result.exit_code == 2, result.output
+    assert "--lint does not support --watch." in result.output
 
 
 def test_strict_mode_accepts_escaped_json_pointer_refs() -> None:

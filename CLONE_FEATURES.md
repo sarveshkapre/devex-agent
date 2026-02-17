@@ -8,7 +8,7 @@
 
 ## Candidate Features To Do
 - [ ] P1 - Spec diff mode to generate change-focused docs between two OpenAPI versions (new/changed/removed endpoints + schema deltas). (Impact 5/5, Effort 4/5, Strategic fit 5/5, Differentiation 4/5, Risk 3/5, Confidence 3/5)
-- [ ] P1 - Add `devex-agent lint` (or `--lint`) with baseline checks: unresolved refs, duplicate operation IDs, duplicate params, and unused components. (Impact 5/5, Effort 4/5, Strategic fit 5/5, Differentiation 3/5, Risk 3/5, Confidence 3/5)
+- [x] P1 - Add `devex-agent lint` (or `--lint`) with baseline checks: unresolved refs, duplicate operation IDs, duplicate params, and unused components. (Delivered 2026-02-17)
 - [ ] P1 - `--output-dir` mode to emit one docs file per tag plus an index page for large API surfaces. (Impact 4/5, Effort 4/5, Strategic fit 4/5, Differentiation 3/5, Risk 3/5, Confidence 3/5)
 - [ ] P1 - HTML export theming flags (`--theme-color`, `--logo-url`, `--font-family`) without template forks. (Impact 4/5, Effort 3/5, Strategic fit 4/5, Differentiation 3/5, Risk 2/5, Confidence 3/5)
 - [ ] P1 - Large-spec performance harness with reproducible benchmark fixture and target budget (render time/memory). (Impact 4/5, Effort 3/5, Strategic fit 4/5, Differentiation 2/5, Risk 2/5, Confidence 4/5)
@@ -25,6 +25,8 @@
 - [ ] P3 - Stdin input support (`devex-agent -`) for easier pipeline integration in CI/CD streams. (Impact 2/5, Effort 2/5, Strategic fit 3/5, Differentiation 1/5, Risk 2/5, Confidence 4/5)
 
 ## Implemented
+- [x] 2026-02-17 - Add `--lint` mode with baseline OpenAPI checks: unresolved `$ref`, duplicate `operationId`, duplicate parameters, and unused components.
+  - Evidence: `src/devex_agent/cli.py`, `src/devex_agent/generator.py`, `tests/test_cli.py`, `tests/fixtures/lint_issues.yaml`, local `make check`, local `.venv/bin/devex-agent tests/fixtures/petstore.yaml --lint`, local `.venv/bin/devex-agent tests/fixtures/lint_issues.yaml --lint`.
 - [x] 2026-02-11 - Enforce OpenAPI parameter override semantics: operation-level parameters now override path-level parameters by `(name, in)`, preventing duplicate parameter rows and stale `curl` query values.
   - Evidence: `src/devex_agent/generator.py`, `tests/test_generator.py`, `tests/fixtures/param_override.yaml`, commit `fac4526`, local `make check`, local `.venv/bin/devex-agent tests/fixtures/param_override.yaml --output /tmp/devex-cycle1-smoke.G1xu5q/param.md`.
 - [x] 2026-02-11 - Fix internal `$ref` resolution and strict validation for escaped JSON Pointer segments (`~1`, `~0`) so component names containing `/` or `~` resolve correctly.

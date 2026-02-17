@@ -13,6 +13,7 @@ Product teams ship APIs faster than docs can keep up. DevEx Agent turns any Open
 - Table of contents + endpoints grouped by tag
 - Security summary per endpoint (based on OpenAPI `security`)
 - `--strict` mode: fail generation on unresolved `$ref` and unsupported request/response content types
+- `--lint` mode: fail-fast OpenAPI checks for unresolved `$ref`, duplicate `operationId`, duplicate parameters, and unused components
 - Watch mode for local specs
 - CLI-first, friendly output
 
@@ -67,6 +68,25 @@ Supported request/response content types for strict mode:
 
 ```bash
 devex-agent ./openapi.yaml --strict --output ./API.md
+```
+
+## Lint mode
+Run baseline spec lint checks and exit with code `2` when issues are found:
+
+```bash
+devex-agent ./openapi.yaml --lint
+```
+
+Checks:
+- unresolved `$ref`
+- duplicate `operationId`
+- duplicate parameters in the same parameter list (`name` + `in`)
+- unused components
+
+For split specs, combine with local bundling:
+
+```bash
+devex-agent ./openapi.yaml --bundle --lint
 ```
 
 ## Multi-file specs (bundle external `$ref`)

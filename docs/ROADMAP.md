@@ -3,6 +3,7 @@
 ## Shipped
 - HTML export with a minimal theme and endpoint filtering.
 - Local preview server for generated HTML via `--serve` (pairs well with `--watch`).
+- Lint mode: `--lint` fails fast on unresolved refs, duplicate `operationId`, duplicate parameters, and unused components.
 - Strict mode: `--strict` fails on unresolved `$ref` and unsupported request/response content types.
 - Multi-file specs (local): `--bundle` inlines external file `$ref` so split OpenAPI specs can render.
 - Base URL controls: `--server` selection, `--base-url` override, and server-variable expansion for stable `curl` examples.
