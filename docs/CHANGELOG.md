@@ -1,6 +1,7 @@
 # CHANGELOG
 
 ## Unreleased
+- Move CI jobs to `runs-on: self-hosted` and replace containerized gitleaks action with runner-local gitleaks install + scan.
 - Add `--lint` mode with baseline OpenAPI checks: unresolved `$ref`, duplicate `operationId`, duplicate parameters, and unused components.
 - Fix parameter handling so operation-level parameters correctly override path-level parameters by `(name, in)`, preventing duplicate rows and stale `curl` query values.
 - Fix internal `$ref` resolution to support escaped JSON Pointer segments (`~1` and `~0`) in both strict validation and rendered examples.

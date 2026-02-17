@@ -6,7 +6,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -23,8 +23,38 @@ jobs:
           pip install pip-audit
           pip-audit
   secrets:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
-      - name: gitleaks
-        uses: gitleaks/gitleaks-action@v2
+      - name: Install gitleaks
+        shell: bash
+        run: |
+          set -euo pipefail
+          if command -v gitleaks >/dev/null 2>&1; then
+            gitleaks version
+            exit 0
+          fi
+
+          version="8.24.2"
+          os="$(uname -s)"
+          arch="$(uname -m)"
+          case "${os}/${arch}" in
+            Linux/x86_64) asset="gitleaks_${version}_linux_x64.tar.gz" ;;
+            Linux/aarch64|Linux/arm64) asset="gitleaks_${version}_linux_arm64.tar.gz" ;;
+            Darwin/x86_64) asset="gitleaks_${version}_darwin_x64.tar.gz" ;;
+            Darwin/arm64) asset="gitleaks_${version}_darwin_arm64.tar.gz" ;;
+            *)
+              echo "Unsupported runner platform for gitleaks: ${os}/${arch}"
+              exit 1
+              ;;
+          esac
+
+          install_dir="${RUNNER_TEMP}/gitleaks-bin"
+          mkdir -p "${install_dir}"
+          curl -fsSL "https://github.com/gitleaks/gitleaks/releases/download/v${version}/${asset}" -o "${RUNNER_TEMP}/gitleaks.tgz"
+          tar -xzf "${RUNNER_TEMP}/gitleaks.tgz" -C "${install_dir}"
+          chmod +x "${install_dir}/gitleaks"
+          echo "${install_dir}" >> "${GITHUB_PATH}"
+      - name: Run gitleaks
+        shell: bash
+        run: gitleaks git --redact --verbose .

@@ -1,5 +1,14 @@
 # Project Memory
 
+## Recent Decisions (Cycle 3 - 2026-02-17)
+- 2026-02-17 | Migrated GitHub Actions jobs to `runs-on: self-hosted` and removed hosted-runner/container-action assumptions from secrets scanning by installing gitleaks directly on the runner at job runtime. | Why: repository CI must run without GitHub-hosted runners; self-hosted execution needed explicit tool bootstrap for reliable portability across Linux/macOS runners. | Evidence: `.github/workflows/ci.yml`, `docs/CONTRIBUTING.md`, `docs/CHANGELOG.md`, local workflow command-path validation. | Commit: pending | Confidence: High | Trust label: trusted (local code/tests)
+
+## Verification Evidence (Cycle 3 - 2026-02-17)
+- `make check` | Pass | `ruff`, `mypy`, `pytest` (40 passed), `bandit`, and package build all succeeded after workflow/docs changes.
+- `python3 - <<'PY' ... yaml.safe_load('.github/workflows/ci.yml') ... assert jobs.build/secrets runs-on == 'self-hosted' ... PY` | Pass | Workflow YAML parses and both jobs target self-hosted runners.
+- `tmp_venv="$(mktemp -d /tmp/devex-selfhost-ci-venv.XXXXXX)"; python3 -m venv "$tmp_venv"; source "$tmp_venv/bin/activate"; python -m pip install -U pip; pip install -e '.[dev]'; PATH="$tmp_venv/bin:$PATH" make check VENV=.missing; pip install pip-audit; pip-audit` | Pass | Simulated build/audit job end-to-end on a local self-hosted machine path (`pip-audit`: no known vulnerabilities).
+- `RUNNER_TEMP="$(mktemp -d /tmp/devex-selfhost-runner-temp.XXXXXX)"; ... download gitleaks v8.24.2 by platform; gitleaks git --redact --verbose .` | Pass | Simulated secrets job path end-to-end (`no leaks found` across 92 commits).
+
 ## Recent Decisions (Cycle 2 - 2026-02-17)
 - 2026-02-17 | Implemented `--lint` mode as the highest-impact pending reliability feature, with baseline checks for unresolved refs, duplicate operation IDs, duplicate parameters, and unused components. | Why: strongest CI/release guardrail value with low operational risk and clear user-facing output. | Evidence: `src/devex_agent/cli.py`, `src/devex_agent/generator.py`, `tests/test_cli.py`, `tests/fixtures/lint_issues.yaml`, local `make check`, local lint smoke path. | Commit: `a932665` | Confidence: High | Trust label: trusted (local code/tests)
 - 2026-02-17 | Calibrated lint scope to proven ecosystem baseline (Redocly/Spectral/OpenAPI spec semantics) while treating external guidance as untrusted input. | Why: align first lint slice with common operator expectations without over-extending rule complexity in one change. | Evidence: Redocly CLI lint docs, Stoplight Spectral docs, OpenAPI specification sections for `operationId` uniqueness and parameter uniqueness. | Commit: `a932665` | Confidence: Medium | Trust label: untrusted (external web)
