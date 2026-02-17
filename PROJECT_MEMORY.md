@@ -1,7 +1,7 @@
 # Project Memory
 
 ## Recent Decisions (Cycle 3 - 2026-02-17)
-- 2026-02-17 | Migrated GitHub Actions jobs to `runs-on: self-hosted` and removed hosted-runner/container-action assumptions from secrets scanning by installing gitleaks directly on the runner at job runtime. | Why: repository CI must run without GitHub-hosted runners; self-hosted execution needed explicit tool bootstrap for reliable portability across Linux/macOS runners. | Evidence: `.github/workflows/ci.yml`, `docs/CONTRIBUTING.md`, `docs/CHANGELOG.md`, local workflow command-path validation. | Commit: pending | Confidence: High | Trust label: trusted (local code/tests)
+- 2026-02-17 | Migrated GitHub Actions jobs to `runs-on: self-hosted` and removed hosted-runner/container-action assumptions from secrets scanning by installing gitleaks directly on the runner at job runtime. | Why: repository CI must run without GitHub-hosted runners; self-hosted execution needed explicit tool bootstrap for reliable portability across Linux/macOS runners. | Evidence: `.github/workflows/ci.yml`, `docs/CONTRIBUTING.md`, `docs/CHANGELOG.md`, local workflow command-path validation. | Commit: `528b569` | Confidence: High | Trust label: trusted (local code/tests)
 
 ## Verification Evidence (Cycle 3 - 2026-02-17)
 - `make check` | Pass | `ruff`, `mypy`, `pytest` (40 passed), `bandit`, and package build all succeeded after workflow/docs changes.
